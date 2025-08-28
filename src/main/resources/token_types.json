@@ -1,0 +1,91 @@
+{
+  "C99": {
+    "keywords": [
+      "auto", "register", "static", "extern", "typedef",
+      "const", "restrict", "volatile", "inline",
+
+      "void", "char", "short", "int", "long", "float", "double",
+      "_Bool", "_Complex", "_Imaginary", "signed", "unsigned",
+
+      "if", "else", "switch", "case", "default",
+      "for", "while", "do", "goto", "continue", "break", "return",
+
+      "struct", "union", "enum"
+    ],
+    "operators": [
+      "==",
+      "!=",
+      "<=",
+      ">=",
+      "++",
+      "--",
+      "+",
+      "-",
+      "*",
+      "/",
+      "=",
+      "<",
+      ">"
+    ],
+    "separators": [
+      ";",
+      ",",
+      "{",
+      "}",
+      "(",
+      ")",
+      "[",
+      "]"
+    ]
+  },
+  "Left": {
+    "keywords": [
+      "auto", "register", "static", "extern", "typedef",
+      "const", "restrict", "volatile", "inline",
+
+      "null", "i8", "i16", "i32", "i64", "f32", "f64",
+      "u8", "u16", "u32", "u64", "f32", "f64",
+      "bool", "complex", "imaginary",
+
+      "if", "else", "switch", "case", "default",
+      "for", "while", "do", "goto", "continue", "break", "return",
+
+      "struct", "union", "enum",
+
+      "true", "false"
+    ],
+    "operators": [
+      "==",
+      "!=",
+      "<=",
+      ">=",
+      "++",
+      "--",
+      "+",
+      "-",
+      "*",
+      "/",
+      "=",
+      "<",
+      ">"
+    ],
+    "separators": [
+      ";",
+      ",",
+      "{",
+      "}",
+      "(",
+      ")",
+      "[",
+      "]"
+    ]
+  },
+  "tokenTypes": {
+    "KEYWORD": 1,
+    "IDENTIFIER": 2,
+    "NUMBER": 3,
+    "STRING": 4,
+    "OPERATOR": 5,
+    "SEPARATOR": 6
+  }
+}
