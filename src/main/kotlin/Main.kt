@@ -1,18 +1,20 @@
-import lexer.Tokenizer
+import lexer.*
 
 fun main() {
-    var tokenizer = Tokenizer(source = """
+    var lexer = Lexer(source = """
         #include <stdout.h>
         
         /* ИТС МАЙ КОМЕНТ УЕЕЕЕЕЕЕЕ
         */
+        
+        ASADSADSA_234  234324324324 
     """.trimIndent())
 
-    while (!tokenizer.isEOF()) {
+    while (!lexer.isEOF()) {
         //println("${tokenizer.pos}, ${tokenizer.peek(tokenizer.pos+1)}")
-        tokenizer.nextToken()
+        lexer.nextToken()
     }
 
-    println(tokenizer.tokens)
-    println(tokenizer.peek())
+    println(lexer.tokens)
+    println(lexer.peek())
 }

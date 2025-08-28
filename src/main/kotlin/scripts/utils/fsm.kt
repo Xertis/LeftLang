@@ -1,13 +1,27 @@
 package scripts.utils
 import lexer.TokenizerStates
+import lexer.LexerInterface
 
-data class State(val state: TokenizerStates)
+class Fsm(var lexer: LexerInterface) {
+    var middlewares = mutableListOf<Pair<TokenizerStates, (LexerInterface) -> TokenizerStates?>>()
+    var state = TokenizerStates.DEFAULT
+    fun addMiddleware(state: TokenizerStates, middleware: (LexerInterface) -> TokenizerStates?) {
+        middlewares.add(Pair(state, middleware))
+    }
 
-class Fsm {
-    var middlewares = mutableListOf<(State) -> State?>()
-    var state = State(TokenizerStates.DEFAULT)
+    fun process() {
+        for (middleware in middlewares) {
+            if (middleware.first == state) {
+                val newState = middleware.second(lexer)
 
-    fun addMiddleware(state: TokenizerStates, middleware: (State) -> State?) {
+                if (newState == null) {
+                    return
+                }
 
+                state = newState
+
+                return
+            }
+        }
     }
 }

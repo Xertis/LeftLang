@@ -1,6 +1,6 @@
-package lexer.tokens
+package lexer
 
-enum class Types {
+enum class TokenTypes {
     IDENT, NUMBER, STRING,
     KW_U8, KW_U16, KW_U32, KW_U64, KW_USIZE,
     KW_I8, KW_I16, KW_I32, KW_I64, KW_ISIZE,
@@ -14,4 +14,8 @@ enum class Types {
     LPAREN, RPAREN, LBRACE, RBRACE, COMMA, SEMI, DOT, QUOT, //(){},;."
     NEW_LINE, PREPROC, EOF
 
+}
+
+enum class TokenizerStates {
+    DEFAULT, IN_IDENT, IN_NUMBER, IN_STRING
 }

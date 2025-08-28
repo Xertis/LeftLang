@@ -1,3 +1,5 @@
 package lexer.tokens
 
-data class Token(val type: Types, val value: String, val ln: Int, val col: Int)
+import lexer.TokenTypes
+
+data class Token(val type: TokenTypes, val value: String, val ln: Int, val col: Int)
