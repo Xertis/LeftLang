@@ -10,12 +10,12 @@ class TokenBuffer(val ln: Int, val col: Int) {
     }
 
     fun popRight() {
-        buffer.dropLast(1)
+        buffer = buffer.dropLast(1)
         length--
     }
 
     fun popLeft() {
-        buffer.drop(1)
+        buffer = buffer.drop(1)
         length--
     }
 

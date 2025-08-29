@@ -39,13 +39,13 @@ fun bindStates(fsm: Fsm): Fsm {
             if (lexer.isIt("\"", true)) {
                 lexer.putToken(TokenTypes.STRING, fun () {
                     lexer.nextIt(arrayOf("\""), true)
-                })
+                }, true)
             }
 
             if (lexer.isIt("'", true)) {
                 lexer.putToken(TokenTypes.CHAR, fun () {
                     lexer.nextIt(arrayOf("'"), true)
-                })
+                }, true)
             }
 
             // Определяем теперь то, какое состояние сделать
@@ -78,7 +78,44 @@ fun bindStates(fsm: Fsm): Fsm {
             lexer.advance()
             return null
         } else {
-            lexer.putToken(TokenTypes.IDENT, lexer.buffer)
+            when (lexer.buffer.get()) {
+                "val" -> lexer.putToken(TokenTypes.VAL, lexer.buffer)
+                "var" -> lexer.putToken(TokenTypes.VAR, lexer.buffer)
+                "const" -> lexer.putToken(TokenTypes.CONST, lexer.buffer)
+
+                "u8" -> lexer.putToken(TokenTypes.KW_U8, lexer.buffer)
+                "u16" -> lexer.putToken(TokenTypes.KW_U16, lexer.buffer)
+                "u32" -> lexer.putToken(TokenTypes.KW_U32, lexer.buffer)
+                "u64" -> lexer.putToken(TokenTypes.KW_U64, lexer.buffer)
+                "usize" -> lexer.putToken(TokenTypes.KW_USIZE, lexer.buffer)
+
+                "i8" -> lexer.putToken(TokenTypes.KW_I8, lexer.buffer)
+                "i16" -> lexer.putToken(TokenTypes.KW_I16, lexer.buffer)
+                "i32" -> lexer.putToken(TokenTypes.KW_I32, lexer.buffer)
+                "i64" -> lexer.putToken(TokenTypes.KW_I64, lexer.buffer)
+                "isize" -> lexer.putToken(TokenTypes.KW_ISIZE, lexer.buffer)
+
+                "f32" -> lexer.putToken(TokenTypes.KW_F32, lexer.buffer)
+                "f64" -> lexer.putToken(TokenTypes.KW_F64, lexer.buffer)
+
+                "String" -> lexer.putToken(TokenTypes.KW_STRING, lexer.buffer)
+                "Bool" -> lexer.putToken(TokenTypes.KW_BOOL, lexer.buffer)
+
+                "if" -> lexer.putToken(TokenTypes.KW_IF, lexer.buffer)
+                "elif" -> lexer.putToken(TokenTypes.KW_ELIF, lexer.buffer)
+                "else" -> lexer.putToken(TokenTypes.KW_ELSE, lexer.buffer)
+
+                "for" -> lexer.putToken(TokenTypes.KW_FOR, lexer.buffer)
+                "while" -> lexer.putToken(TokenTypes.KW_WHILE, lexer.buffer)
+
+                "true" -> lexer.putToken(TokenTypes.KW_TRUE, lexer.buffer)
+                "false" -> lexer.putToken(TokenTypes.KW_FALSE, lexer.buffer)
+
+                "fun" -> lexer.putToken(TokenTypes.KW_FUN, lexer.buffer)
+                "return" -> lexer.putToken(TokenTypes.KW_RETURN, lexer.buffer)
+
+                else -> lexer.putToken(TokenTypes.IDENT, lexer.buffer)
+            }
             return TokenizerStates.DEFAULT
         }
     })
@@ -123,6 +160,9 @@ fun bindStates(fsm: Fsm): Fsm {
                 ">=" -> lexer.putToken(TokenTypes.GTE, lexer.buffer)
                 "==" -> lexer.putToken(TokenTypes.EQEQ, lexer.buffer)
                 "!=" -> lexer.putToken(TokenTypes.BANGEQ, lexer.buffer)
+                "||" -> lexer.putToken(TokenTypes.OR, lexer.buffer)
+                "&&" -> lexer.putToken(TokenTypes.AND, lexer.buffer)
+                "->" -> lexer.putToken(TokenTypes.ARROW, lexer.buffer)
             }
 
             return TokenizerStates.DEFAULT

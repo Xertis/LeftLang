@@ -4,9 +4,14 @@ fun main() {
     val lexer = Lexer(source = """
         #include <stdout.h>
         
+        const Pi: 
+        
         fun main() -> u32 {
-            var x: String = 'AAAAAAAAAAAAAAA'
-            return x
+            val x: String = "AAAAAAAAAAAAAAA" && 'a'
+            var x: f32 = 34.8
+            
+            x = true
+            return 0
         }       
     """.trimIndent())
 

@@ -147,13 +147,18 @@ class Lexer(override val source: String) : LexerInterface {
         return (pos+1 > source.length)
     }
 
-    override fun putToken(type: TokenTypes, move: () -> Unit) {
+    override fun putToken(type: TokenTypes, move: () -> Unit, popLast: Boolean) {
         val curPos = pos
         val ln = line
         val column = col
         move()
 
-        val code: String = source.substring(curPos, pos)
+        var code: String = source.substring(curPos, pos)
+
+        if (popLast) {
+            code = code.dropLast(1)
+        }
+
         tokens.add(
             Token(
                 type = type,
@@ -164,7 +169,10 @@ class Lexer(override val source: String) : LexerInterface {
         )
     }
 
-    override fun putToken(type: TokenTypes, buffer: TokenBuffer) {
+    override fun putToken(type: TokenTypes, buffer: TokenBuffer, popLast: Boolean) {
+        if (popLast) {
+            buffer.popRight()
+        }
         tokens.add(
             Token(
                 type = type,

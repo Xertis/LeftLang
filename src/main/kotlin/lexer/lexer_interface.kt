@@ -24,8 +24,8 @@ interface LexerInterface {
     fun getOperator(skip: Boolean = false): String
 
     fun singleToToken(char: Char): TokenTypes?
-    fun putToken(type: TokenTypes, move: () -> Unit)
-    fun putToken(type: TokenTypes, buffer: TokenBuffer)
+    fun putToken(type: TokenTypes, move: () -> Unit, popLast: Boolean=false)
+    fun putToken(type: TokenTypes, buffer: TokenBuffer, popLast: Boolean=false)
 
     fun nextToken()
 }
