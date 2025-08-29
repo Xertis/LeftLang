@@ -26,7 +26,7 @@ int main(void) {
 #include <stdio.h>
 
 fun main() -> int {
-  let x: u32 = 0
+  var x: u32 = 0
   printf("%d", x)
   return 0
 }
