@@ -1,13 +1,13 @@
 import lexer.*
 
 fun main() {
-    var lexer = Lexer(source = """
+    val lexer = Lexer(source = """
         #include <stdout.h>
         
-        /* ИТС МАЙ КОМЕНТ УЕЕЕЕЕЕЕЕ
-        */
-        
-        ASADSADSA_234  234324324324 
+        fun main() -> u32 {
+            var x: String = 'AAAAAAAAAAAAAAA'
+            return x
+        }       
     """.trimIndent())
 
     while (!lexer.isEOF()) {

@@ -5,7 +5,7 @@ import scripts.utils.TokenBuffer
 
 interface LexerInterface {
     // Свойства
-    val pos: Int
+    var pos: Int
     val col: Int
     val line: Int
     val source: String
@@ -23,7 +23,7 @@ interface LexerInterface {
     fun getIndent(skip: Boolean = false): String
     fun getOperator(skip: Boolean = false): String
 
-    fun singleToToken(char: Char): Token
+    fun singleToToken(char: Char): TokenTypes?
     fun putToken(type: TokenTypes, move: () -> Unit)
     fun putToken(type: TokenTypes, buffer: TokenBuffer)
 

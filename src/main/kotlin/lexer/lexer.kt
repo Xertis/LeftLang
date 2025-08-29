@@ -35,10 +35,11 @@ class Lexer(override val source: String) : LexerInterface {
         }
     }
 
-    override fun singleToToken(char: Char): Token {
+    override fun singleToToken(char: Char): TokenTypes? {
         val type = when (char) {
             '+'  -> TokenTypes.PLUS
             '-'  -> TokenTypes.MINUS
+            '='  -> TokenTypes.EQ
             '*'  -> TokenTypes.MUL
             '/'  -> TokenTypes.DIV
             '('  -> TokenTypes.LPAREN
@@ -49,11 +50,10 @@ class Lexer(override val source: String) : LexerInterface {
             ';'  -> TokenTypes.NEW_LINE
             '\n' -> TokenTypes.NEW_LINE
             '.'  -> TokenTypes.DOT
-            '#'  -> TokenTypes.PREPROC
-            else -> throw Exception("Unexpected char '$char' at $line:$col")
+            else -> return null
         }
 
-        return Token(type = type, value = char.toString(), ln = line, col = col)
+        return type
     }
 
     override fun nextIt(values: Array<String>, skip: Boolean): Boolean {
