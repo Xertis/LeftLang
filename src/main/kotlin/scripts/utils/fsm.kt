@@ -1,5 +1,5 @@
 package scripts.utils
-import lexer.TokenizerStates
+import TokenizerStates
 import lexer.LexerInterface
 
 class Fsm(var lexer: LexerInterface) {

@@ -1,6 +1,7 @@
 package lexer
 
-import lexer.tokens.Token
+import TokenTypes
+import tokens.Token
 import scripts.utils.Fsm
 import scripts.utils.TokenBuffer
 
@@ -33,27 +34,6 @@ class Lexer(override val source: String) : LexerInterface {
         while (peek() != '\n' && peek() != '\u0000') {
             advance()
         }
-    }
-
-    override fun singleToToken(char: Char): TokenTypes? {
-        val type = when (char) {
-            '+'  -> TokenTypes.PLUS
-            '-'  -> TokenTypes.MINUS
-            '='  -> TokenTypes.EQ
-            '*'  -> TokenTypes.MUL
-            '/'  -> TokenTypes.DIV
-            '('  -> TokenTypes.LPAREN
-            ')'  -> TokenTypes.RPAREN
-            '{'  -> TokenTypes.LBRACE
-            '}'  -> TokenTypes.RBRACE
-            ','  -> TokenTypes.COMMA
-            ';'  -> TokenTypes.NEW_LINE
-            '\n' -> TokenTypes.NEW_LINE
-            '.'  -> TokenTypes.DOT
-            else -> return null
-        }
-
-        return type
     }
 
     override fun nextIt(values: Array<String>, skip: Boolean): Boolean {
@@ -102,47 +82,6 @@ class Lexer(override val source: String) : LexerInterface {
         return true
     }
 
-    override fun getIndent(skip: Boolean): String {
-        val validIndentChars =
-            "abcdefghijklmnopqrstuvwxyz" +
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
-            "0123456789" +
-            "_"
-
-        var offset: Int = 0
-        var indent: String = ""
-
-        if (source[pos].isLetter()) {
-            while (source[pos + offset] in validIndentChars) {
-                indent += source[pos + offset]
-                offset++
-            }
-        }
-
-        if (skip) {
-            repeat(offset) { advance() }
-        }
-
-        return indent
-    }
-
-    override fun getOperator(skip: Boolean): String {
-        val validOperatorChars = "+-=,;(){}[]"
-
-        var offset: Int = 0
-        var operator: String = ""
-        while (source[pos+offset] in validOperatorChars) {
-            operator += source[pos+offset]
-            offset++
-        }
-
-        if (skip) {
-            repeat(offset) { advance() }
-        }
-
-        return operator
-    }
-
     override fun isEOF(): Boolean {
         return (pos+1 > source.length)
     }
@@ -183,8 +122,9 @@ class Lexer(override val source: String) : LexerInterface {
         )
     }
 
-
-    override fun nextToken() {
-        fsm.process()
+    override fun toTokens() {
+        while (!isEOF()) {
+            fsm.process()
+        }
     }
 }

@@ -2,6 +2,8 @@ package lexer
 
 import scripts.utils.Fsm
 import scripts.utils.TokenBuffer
+import TokenTypes
+import TokenizerStates
 
 const val VALID_OPERATOR_SYMBOLS = "-+/*=<>&|!"
 const val VALID_DELIMETER_SYMBOLS = ":;(){}.,"
@@ -14,18 +16,14 @@ fun bindStates(fsm: Fsm): Fsm {
 
             // Скипаем ненужное
             when (char) {
-                '#' -> {
-                    lexer.putToken(TokenTypes.PREPROC, lexer::nextLine)
-                    return null
-                }
 
                 ' ' -> {
                     lexer.advance(); return null
                 }
 
                 '\n' -> {
-                    lexer.putToken(TokenTypes.NEW_LINE, lexer::advance)
-                    return null
+                    // lexer.putToken(TokenTypes.NEW_LINE, lexer::advance)
+                    lexer.advance(); return null
                 }
             }
 
@@ -66,6 +64,10 @@ fun bindStates(fsm: Fsm): Fsm {
                 char in VALID_DELIMETER_SYMBOLS -> {
                     return TokenizerStates.IN_DELIMETER
                 }
+
+                char == '#' -> {
+                    return TokenizerStates.IN_PREPROC
+                }
             }
 
             return null
@@ -100,6 +102,7 @@ fun bindStates(fsm: Fsm): Fsm {
 
                 "String" -> lexer.putToken(TokenTypes.KW_STRING, lexer.buffer)
                 "Bool" -> lexer.putToken(TokenTypes.KW_BOOL, lexer.buffer)
+                "Void" -> lexer.putToken(TokenTypes.KW_VOID, lexer.buffer)
 
                 "if" -> lexer.putToken(TokenTypes.KW_IF, lexer.buffer)
                 "elif" -> lexer.putToken(TokenTypes.KW_ELIF, lexer.buffer)
@@ -186,6 +189,18 @@ fun bindStates(fsm: Fsm): Fsm {
             }
         }
         lexer.advance()
+        return TokenizerStates.DEFAULT
+    })
+
+    fsm.addMiddleware(TokenizerStates.IN_PREPROC, fun (lexer: LexerInterface): TokenizerStates? {
+        lexer.advance()
+
+        when {
+            lexer.isIt("include") -> lexer.putToken(TokenTypes.PP_INCLUDE, fun() {
+                lexer.isIt("include", true)
+            })
+        }
+
         return TokenizerStates.DEFAULT
     })
 

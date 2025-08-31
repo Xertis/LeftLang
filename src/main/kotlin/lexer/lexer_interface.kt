@@ -1,6 +1,7 @@
 package lexer
 
-import lexer.tokens.Token
+import TokenTypes
+import tokens.Token
 import scripts.utils.TokenBuffer
 
 interface LexerInterface {
@@ -20,12 +21,9 @@ interface LexerInterface {
 
     fun nextIt(values: Array<String>, skip: Boolean = false): Boolean
     fun isIt(value: String, skip: Boolean = false): Boolean
-    fun getIndent(skip: Boolean = false): String
-    fun getOperator(skip: Boolean = false): String
 
-    fun singleToToken(char: Char): TokenTypes?
     fun putToken(type: TokenTypes, move: () -> Unit, popLast: Boolean=false)
     fun putToken(type: TokenTypes, buffer: TokenBuffer, popLast: Boolean=false)
 
-    fun nextToken()
+    fun toTokens()
 }
