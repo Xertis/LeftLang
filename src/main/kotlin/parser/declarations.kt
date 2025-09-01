@@ -1,5 +1,7 @@
 package parser
 
+import TokenTypes
+
 sealed class Node
 
 // --- верхний уровень ---
@@ -10,6 +12,14 @@ data class FunDecl(
     val returnType: String,
     val params: List<Param>,
     val body: Block
+) : Node()
+
+data class LogicDecl(
+    val type: TokenTypes,
+    val logicExpr: Expr,
+    val body: Block,
+    val middlewares: List<LogicDecl>?=null,
+    val elseWare: Block?=null
 ) : Node()
 
 data class Param(val name: String, val type: String)

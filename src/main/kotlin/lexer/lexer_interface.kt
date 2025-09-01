@@ -19,9 +19,11 @@ interface LexerInterface {
     fun nextLine()
     fun isEOF(): Boolean
 
+    // Методы для поиска и проверки подстрок
     fun nextIt(values: Array<String>, skip: Boolean = false): Boolean
     fun isIt(value: String, skip: Boolean = false): Boolean
 
+    // Методы для работы с токенами
     fun putToken(type: TokenTypes, move: () -> Unit, popLast: Boolean=false)
     fun putToken(type: TokenTypes, buffer: TokenBuffer, popLast: Boolean=false)
 

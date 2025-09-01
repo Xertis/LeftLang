@@ -9,22 +9,24 @@ import parser.Expr
 import parser.FunDecl
 import parser.Include
 import parser.Literal
+import parser.LogicDecl
 import parser.Node
 import parser.PreProcDecl
 import parser.Program
 import parser.Return
 import parser.VarDecl
 import parser.VarRef
+import tokens.Token
 
 class Generator(val program: Program) {
-    fun isUnsigned(type: String): Boolean {
+    private fun isUnsigned(type: String): Boolean {
         return when (type) {
             "u8", "u16", "u32", "u64", "usize" -> true
             else -> false
         }
     }
 
-    fun left2Ctype(type: String): String {
+    private fun left2Ctype(type: String): String {
         return when(type) {
             "u8", "i8" -> "char"
             "u16", "i16" -> "short"
@@ -37,7 +39,7 @@ class Generator(val program: Program) {
         }
     }
 
-    fun genFunc(decl: FunDecl): String {
+    private fun genFunc(decl: FunDecl): String {
         val params = mutableListOf<String>()
         for (param in decl.params) {
             val isUnsigned = if (isUnsigned(param.type)) "unsigned" else ""
@@ -51,11 +53,28 @@ class Generator(val program: Program) {
         )} {\n$body\n}\n"
     }
 
-    fun genBlock(decl: Block): String {
+    private fun genLogic(decl: LogicDecl): String {
+        val name = if (decl.type == TokenTypes.KW_IF) "if" else "else if"
+
+        var fullLogicBlock = "$name ${gen(decl.logicExpr)} {\n${gen(decl.body)}}"
+
+        if (decl.middlewares != null) {
+            for (ware in decl.middlewares) {
+                fullLogicBlock += genLogic(ware)
+            }
+        }
+
+        if (decl.elseWare != null) {
+            fullLogicBlock += "else {\n${gen(decl.elseWare)}}"
+        }
+
+        return fullLogicBlock
+    }
+
+    private fun genBlock(decl: Block): String {
         val code = StringBuilder()
         for (dec in decl.statements) {
             code.append(gen(dec))
-            // добавляем ; для statement-типов
             when (dec) {
                 is VarDecl, is CallExpr, is Return, is Assign -> code.append(";\n")
                 else -> code.append("\n")
@@ -64,12 +83,12 @@ class Generator(val program: Program) {
         return code.toString()
     }
 
-    fun genVar(decl: VarDecl): String {
+    private fun genVar(decl: VarDecl): String {
         val isUnsigned = if (isUnsigned(decl.type)) "unsigned" else ""
         return "$isUnsigned ${left2Ctype(decl.type)} ${decl.name} = ${gen(decl.value)}"
     }
 
-    fun genCall(decl: CallExpr): String {
+    private fun genCall(decl: CallExpr): String {
         val args = decl.args.joinToString(
             separator = ",",
             prefix = "(",
@@ -78,18 +97,18 @@ class Generator(val program: Program) {
         return "${decl.name}$args"
     }
 
-    fun genInclude(decl: Include): String {
+    private fun genInclude(decl: Include): String {
         val prefix = if (decl.isStd) '<' else '"'
         val postfix = if (decl.isStd) '>' else '"'
         return "include $prefix${decl.path}$postfix\n"
     }
 
-    fun gen(decl: Node): String {
+    private fun gen(decl: Node): String {
         return when (decl) {
             is Assign -> throw RuntimeException("не реализован $decl")
             is Block -> genBlock(decl)
             is ConstDecl -> throw RuntimeException("не реализован $decl")
-            is BinaryExpr -> "${gen(decl.left)} ${decl.op} ${gen(decl.right)}"
+            is BinaryExpr -> "(${gen(decl.left)} ${decl.op} ${gen(decl.right)})"
             is CallExpr -> genCall(decl)
             is Include -> genInclude(decl)
             is Literal -> "${decl.value}"
@@ -99,6 +118,7 @@ class Generator(val program: Program) {
             is Program -> throw RuntimeException("не реализован $decl")
             is Return -> "return ${gen(decl.value)}"
             is VarDecl -> genVar(decl)
+            is LogicDecl -> genLogic(decl)
         }
     }
 

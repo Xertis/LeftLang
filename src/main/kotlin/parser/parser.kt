@@ -26,6 +26,7 @@ class Parser(val tokens: List<Token>) {
             TokenTypes.VAL, TokenTypes.VAR -> parseVarDecl()
             TokenTypes.CONST -> parseConstDecl()
             TokenTypes.KW_FUN -> parseFunDecl()
+            TokenTypes.KW_IF -> parseIf()
             TokenTypes.KW_RETURN -> parseReturn()
             TokenTypes.PP_INCLUDE -> parsePreProc()
             TokenTypes.IDENT -> {
@@ -34,6 +35,29 @@ class Parser(val tokens: List<Token>) {
             }
             else -> throw RuntimeException("Неожиданный токен: ${peek()}")
         }
+    }
+
+    // Условные выражения
+    private fun parseIf(): LogicDecl {
+        expect(TokenTypes.KW_IF)
+        val condition = parseExpr()
+        val body = parseBlock()
+        val elifs = mutableListOf<LogicDecl>()
+
+        while (peek()?.type == TokenTypes.KW_ELIF) {
+            advance()
+            val elifCond = parseExpr()
+            val elifBody = parseBlock()
+            elifs.add(LogicDecl(TokenTypes.KW_ELIF, elifCond, elifBody))
+        }
+
+        var elseBlock: Block? = null
+        if (peek()?.type == TokenTypes.KW_ELSE) {
+            advance()
+            elseBlock = parseBlock()
+        }
+
+        return LogicDecl(TokenTypes.KW_IF, condition, body, elifs.ifEmpty { null }, elseBlock)
     }
 
     // Парсинг переменной
@@ -119,7 +143,42 @@ class Parser(val tokens: List<Token>) {
     }
 
     // Выражения с приоритетами
-    private fun parseExpr(): Expr = parseAddSub()
+    private fun parseExpr(): Expr = parseOr()
+
+    private fun parseOr(): Expr {
+        var expr = parseAnd()
+        while (peek()?.type == TokenTypes.OR) {
+            val op = advance()!!.value
+            val right = parseAnd()
+            expr = BinaryExpr(expr, op, right)
+        }
+        return expr
+    }
+
+    private fun parseAnd(): Expr {
+        var expr = parseComparison()
+        while (peek()?.type == TokenTypes.AND) {
+            val op = advance()!!.value
+            val right = parseComparison()
+            expr = BinaryExpr(expr, op, right)
+        }
+        return expr
+    }
+
+    private fun parseComparison(): Expr {
+        var expr = parseAddSub()
+        while (peek()?.type in listOf(
+                TokenTypes.EQEQ, TokenTypes.BANGEQ,
+                TokenTypes.LT, TokenTypes.LTE,
+                TokenTypes.GT, TokenTypes.GTE
+            )
+        ) {
+            val op = advance()!!.value
+            val right = parseAddSub()
+            expr = BinaryExpr(expr, op, right)
+        }
+        return expr
+    }
 
     private fun parseAddSub(): Expr {
         var expr = parseMulDiv()
@@ -132,13 +191,24 @@ class Parser(val tokens: List<Token>) {
     }
 
     private fun parseMulDiv(): Expr {
-        var expr = parsePrimary()
+        var expr = parseUnary()
         while (peek()?.type == TokenTypes.MUL || peek()?.type == TokenTypes.DIV) {
             val op = advance()!!.value
-            val right = parsePrimary()
+            val right = parseUnary()
             expr = BinaryExpr(expr, op, right)
         }
         return expr
+    }
+
+    private fun parseUnary(): Expr {
+        return when (peek()?.type) {
+            TokenTypes.NOT, TokenTypes.MINUS -> {
+                val op = advance()!!.value
+                val right = parseUnary()
+                BinaryExpr(Literal(""), op, right)
+            }
+            else -> parsePrimary()
+        }
     }
 
     private fun parsePrimary(): Expr {
@@ -147,7 +217,6 @@ class Parser(val tokens: List<Token>) {
         return when (token.type) {
             TokenTypes.NUMBER -> {
                 var num = token.value
-
                 if (peek()?.type == TokenTypes.DOT) {
                     expect(TokenTypes.DOT)
                     val part2 = expect(TokenTypes.NUMBER)!!
@@ -155,7 +224,8 @@ class Parser(val tokens: List<Token>) {
                 }
                 Literal(num)
             }
-            TokenTypes.STRING -> Literal(token.value)
+            TokenTypes.STRING -> Literal("\"${token.value}\"")
+            TokenTypes.CHAR -> Literal("'${token.value}'")
             TokenTypes.IDENT -> {
                 val name = token.value
                 if (peek()?.type == TokenTypes.LPAREN) {
