@@ -6,17 +6,6 @@
 
 ### Сравнение кода
 
-- C99
-```C
-#include <stdio.h>
-
-int main(void) {
-  unsigned int x = 0;
-  printf("%d", x);
-  return 0;
-}
-```
-
 - Left
 ```kotlin
 #include <stdio.h>
@@ -25,5 +14,16 @@ fun main() -> i32 {
   var x: u32 = 0
   printf("%d", x)
   return 0
+}
+```
+
+- C99
+```C
+#include <stdio.h>
+
+int main(void) {
+  unsigned int x = 0;
+  printf("%d", x);
+  return 0;
 }
 ```
