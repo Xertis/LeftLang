@@ -81,16 +81,15 @@ class Parser(val tokens: List<Token>) {
             var isFirst = true
             while (peek()?.type != TokenTypes.RBRACE && !isEOF()) {
                 val currentToken = peek()
-
-                if (currentToken?.type == TokenTypes.KW_ELSE) {
+                val isElseBlock = currentToken?.type == TokenTypes.KW_ELSE
+                var expr: Expr? = null
+                if (!isElseBlock) {
+                    expr = parseExpr()
+                    if (expr !is BinaryExpr || !isLogicExpr(expr)) {
+                        expr = BinaryExpr(variable, "==", expr)
+                    }
+                } else {
                     advance()
-                    expect(TokenTypes.ARROW)
-                    elseBlock = parseBlock()
-                    break
-                }
-                var expr = parseExpr()
-                if (expr !is BinaryExpr || !isLogicExpr(expr)) {
-                    expr = BinaryExpr(variable, "==", expr)
                 }
                 expect(TokenTypes.ARROW)
 
@@ -103,7 +102,12 @@ class Parser(val tokens: List<Token>) {
                     throw RuntimeException("Невозможно присвоить значение НЕ переменной")
                 }
 
-                middlewares += LogicDecl(if (isFirst) TokenTypes.KW_IF else TokenTypes.KW_ELIF, expr, body)
+                if (!isElseBlock) {
+                    middlewares += LogicDecl(if (isFirst) TokenTypes.KW_IF else TokenTypes.KW_ELIF, expr!!, body)
+                } else {
+                    elseBlock = body
+                    break
+                }
                 isFirst = false
             }
 
