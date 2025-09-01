@@ -224,6 +224,8 @@ class Parser(val tokens: List<Token>) {
                 }
                 Literal(num)
             }
+            TokenTypes.KW_TRUE -> Literal("1")
+            TokenTypes.KW_FALSE -> Literal("0")
             TokenTypes.STRING -> Literal("\"${token.value}\"")
             TokenTypes.CHAR -> Literal("'${token.value}'")
             TokenTypes.IDENT -> {
