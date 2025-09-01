@@ -10,8 +10,7 @@ fun main() {
             var b: u8 = 3
             var y: u8 = 2
             when (b) {
-                y+1 -> {printf("у нас 2")}
-                3 -> {printf("у нас 3")}
+                3 -> y+1
             }
         } 
     """.trimIndent())

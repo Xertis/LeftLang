@@ -93,7 +93,15 @@ class Parser(val tokens: List<Token>) {
                     expr = BinaryExpr(variable, "==", expr)
                 }
                 expect(TokenTypes.ARROW)
-                val body = parseBlock()
+
+                var body: Block? = null
+                if (peek()?.type == TokenTypes.LBRACE) {
+                    body = parseBlock()
+                } else if (variable is VarRef) {
+                    body = Block(listOf(Assign(variable.name, parseExpr())))
+                } else {
+                    throw RuntimeException("Невозможно присвоить значение НЕ переменной")
+                }
 
                 middlewares += LogicDecl(if (isFirst) TokenTypes.KW_IF else TokenTypes.KW_ELIF, expr, body)
                 isFirst = false
