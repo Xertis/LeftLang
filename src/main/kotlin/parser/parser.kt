@@ -3,6 +3,7 @@ package parser
 import tokens.Token
 import TokenTypes
 import TokenGroups
+import kotlin.math.exp
 
 class Parser(val tokens: List<Token>) {
     var pos: Int = 0
@@ -11,6 +12,12 @@ class Parser(val tokens: List<Token>) {
     fun advance(): Token? = tokens.getOrNull(pos++)
     fun isEOF(): Boolean = pos >= tokens.size
     fun back(): Token? = tokens.getOrNull(pos--)
+    fun isLogicExpr(expr: BinaryExpr): Boolean {
+        return when (expr.op) {
+            "+", "-", "*", "/" -> false
+            else -> true
+        }
+    }
 
     fun makeAst(): Program {
         val decls = mutableListOf<Node>()
@@ -29,6 +36,7 @@ class Parser(val tokens: List<Token>) {
             TokenTypes.KW_IF -> parseIf()
             TokenTypes.KW_RETURN -> parseReturn()
             TokenTypes.PP_INCLUDE -> parsePreProc()
+            TokenTypes.KW_WHEN -> parseWhen()
             TokenTypes.IDENT -> {
                 if (peek(offset = 1)?.type == TokenTypes.EQ) parseAssign()
                 else parseCall()
@@ -58,6 +66,45 @@ class Parser(val tokens: List<Token>) {
         }
 
         return LogicDecl(TokenTypes.KW_IF, condition, body, elifs.ifEmpty { null }, elseBlock)
+    }
+
+    private fun parseWhen(): WhenDecl {
+        val middlewares = mutableListOf<LogicDecl>()
+        var elseBlock: Block? = null
+        expect(TokenTypes.KW_WHEN)
+
+        if (expect(TokenTypes.LPAREN, soft = true) != null) {
+            val variable = parseExpr()
+            expect(TokenTypes.RPAREN)
+
+            expect(TokenTypes.LBRACE)
+            var isFirst = true
+            while (peek()?.type != TokenTypes.RBRACE && !isEOF()) {
+                val currentToken = peek()
+
+                if (currentToken?.type == TokenTypes.KW_ELSE) {
+                    advance()
+                    expect(TokenTypes.ARROW)
+                    elseBlock = parseBlock()
+                    break
+                }
+                var expr = parseExpr()
+                if (expr !is BinaryExpr || !isLogicExpr(expr)) {
+                    expr = BinaryExpr(variable, "==", expr)
+                }
+                expect(TokenTypes.ARROW)
+                val body = parseBlock()
+
+                middlewares += LogicDecl(if (isFirst) TokenTypes.KW_IF else TokenTypes.KW_ELIF, expr, body)
+                isFirst = false
+            }
+
+            expect(TokenTypes.RBRACE)
+        }
+
+        if (elseBlock == null) throw RuntimeException("Потерян else блок внутри when")
+
+        return WhenDecl(middlewares, elseBlock)
     }
 
     // Парсинг переменной

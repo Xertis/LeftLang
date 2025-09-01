@@ -6,16 +6,15 @@ fun main() {
     val lexer = Lexer(source = """
         #include <stdio.h>
         
-        fun discriminant(a: f64, b: f64, c: f64) -> f64 {
-            return b*b-4*a*c
-        }
-        
         fun main() -> i32 {
-            var a: f64 = 3
-            var b: f64 = 7
-            var c: f64 = -6
-            printf("%f", discriminant(a, b, c))
-            return 0
+            var b: u8 = 3
+            var y: u8 = 2
+            when (b) {
+                1 || 2 -> {printf("у нас 1")}
+                y+1 -> {printf("у нас 2")}
+                3 -> {printf("у нас 3")}
+                else -> {printf("У нас не 1, не 2, не 3")}
+            }
         } 
     """.trimIndent())
 

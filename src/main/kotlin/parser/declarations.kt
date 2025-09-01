@@ -22,6 +22,11 @@ data class LogicDecl(
     val elseWare: Block?=null
 ) : Node()
 
+data class WhenDecl(
+    val middlewares: List<LogicDecl>,
+    val elseWare: Block
+) : Node()
+
 data class Param(val name: String, val type: String)
 
 // --- операторы ---

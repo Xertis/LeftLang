@@ -107,6 +107,7 @@ fun bindStates(fsm: Fsm): Fsm {
                 "if" -> lexer.putToken(TokenTypes.KW_IF, lexer.buffer)
                 "elif" -> lexer.putToken(TokenTypes.KW_ELIF, lexer.buffer)
                 "else" -> lexer.putToken(TokenTypes.KW_ELSE, lexer.buffer)
+                "when" -> lexer.putToken(TokenTypes.KW_WHEN, lexer.buffer)
 
                 "for" -> lexer.putToken(TokenTypes.KW_FOR, lexer.buffer)
                 "while" -> lexer.putToken(TokenTypes.KW_WHILE, lexer.buffer)

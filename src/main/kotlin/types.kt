@@ -4,7 +4,7 @@ enum class TokenTypes {
     KW_I8, KW_I16, KW_I32, KW_I64, KW_ISIZE,
     KW_F32, KW_F64,
     KW_BOOL, KW_STRING, KW_VOID,
-    KW_IF, KW_ELSE, KW_ELIF,
+    KW_IF, KW_ELSE, KW_ELIF, KW_WHEN,
     KW_FUN, KW_RETURN,
     KW_WHILE, KW_FOR,
     KW_TRUE, KW_FALSE,

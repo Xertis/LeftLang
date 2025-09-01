@@ -16,6 +16,7 @@ import parser.Program
 import parser.Return
 import parser.VarDecl
 import parser.VarRef
+import parser.WhenDecl
 import tokens.Token
 
 class Generator(val program: Program) {
@@ -55,6 +56,10 @@ class Generator(val program: Program) {
         )} {\n$body\n}\n"
     }
 
+    private fun genElse(decl: Block): String {
+        return "else {\n${gen(decl)}}"
+    }
+
     private fun genLogic(decl: LogicDecl): String {
         val name = if (decl.type == TokenTypes.KW_IF) "if" else "else if"
 
@@ -67,10 +72,22 @@ class Generator(val program: Program) {
         }
 
         if (decl.elseWare != null) {
-            fullLogicBlock += "else {\n${gen(decl.elseWare)}}"
+            fullLogicBlock += genElse(decl.elseWare)
         }
 
         return fullLogicBlock
+    }
+
+    private fun genWhen(decl: WhenDecl): String {
+        val code = StringBuilder()
+
+        for (ware in decl.middlewares) {
+            code.append(genLogic(ware))
+        }
+
+        code.append(genElse(decl.elseWare))
+
+        return code.toString()
     }
 
     private fun genBlock(decl: Block): String {
@@ -121,6 +138,7 @@ class Generator(val program: Program) {
             is Return -> "return ${gen(decl.value)}"
             is VarDecl -> genVar(decl)
             is LogicDecl -> genLogic(decl)
+            is WhenDecl -> genWhen(decl)
         }
     }
 
