@@ -24,7 +24,7 @@ data class LogicDecl(
 
 data class WhenDecl(
     val middlewares: List<LogicDecl>,
-    val elseWare: Block
+    val elseWare: Block?=null
 ) : Node()
 
 data class Param(val name: String, val type: String)

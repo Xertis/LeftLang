@@ -102,8 +102,6 @@ class Parser(val tokens: List<Token>) {
             expect(TokenTypes.RBRACE)
         }
 
-        if (elseBlock == null) throw RuntimeException("Потерян else блок внутри when")
-
         return WhenDecl(middlewares, elseBlock)
     }
 

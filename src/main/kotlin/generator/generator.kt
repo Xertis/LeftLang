@@ -85,7 +85,7 @@ class Generator(val program: Program) {
             code.append(genLogic(ware))
         }
 
-        code.append(genElse(decl.elseWare))
+        if (decl.elseWare != null) code.append(genElse(decl.elseWare))
 
         return code.toString()
     }
