@@ -6,16 +6,15 @@ fun main() {
     val lexer = Lexer(source = """
         #include <stdio.h>
         
-        fun max(a: i32, b: i32) -> i32 {
-            if a > b {return a}
-            elif a == b {return 0}
-            else {return b}
+        fun discriminant(a: f64, b: f64, c: f64) -> f64 {
+            return b*b-4*a*c
         }
         
         fun main() -> i32 {
-            var x: i32 = -10
-            var y: i32 = 5
-            printf("%d", max(x, y))
+            var a: f64 = 3
+            var b: f64 = 7
+            var c: f64 = -6
+            printf("%f", discriminant(a, b, c))
             return 0
         } 
     """.trimIndent())

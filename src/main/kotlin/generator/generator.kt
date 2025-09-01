@@ -33,6 +33,8 @@ class Generator(val program: Program) {
             "u32", "i32" -> "int"
             "u64", "i64" -> "long"
             "usize", "isize" -> "long long"
+            "f32" -> "float"
+            "f64" -> "double"
             "Bool" -> "_Bool"
             "Void" -> "void"
             else -> throw RuntimeException("Unknown type: $type")

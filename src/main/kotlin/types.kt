@@ -30,6 +30,8 @@ val VALID_VARTYPE_GROUP_TOKEN_TYPES = arrayOf(
     TokenTypes.KW_U32,
     TokenTypes.KW_U64,
     TokenTypes.KW_USIZE,
+    TokenTypes.KW_F32,
+    TokenTypes.KW_F64,
     TokenTypes.KW_STRING,
     TokenTypes.KW_BOOL,
     TokenTypes.KW_VOID
