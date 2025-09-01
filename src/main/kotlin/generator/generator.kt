@@ -124,7 +124,7 @@ class Generator(val program: Program) {
 
     private fun gen(decl: Node): String {
         return when (decl) {
-            is Assign -> throw RuntimeException("не реализован $decl")
+            is Assign -> "${decl.target} = ${gen(decl.value)}"
             is Block -> genBlock(decl)
             is ConstDecl -> throw RuntimeException("не реализован $decl")
             is BinaryExpr -> "(${gen(decl.left)} ${decl.op} ${gen(decl.right)})"
