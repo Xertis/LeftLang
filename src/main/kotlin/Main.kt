@@ -4,15 +4,18 @@ import generator.*
 
 fun main() {
     val lexer = Lexer(source = """
-        #include <stdio.h>
+#include <stdio.h>
+
+fun sum(a: f64, b: f64=1+2) -> f64 {
+    return a+b
+}
+
+fun main() -> i32 {
+  sum(6, 5)
+
+  return 0
+}
         
-        fun main() -> i32 {
-            var b: u8 = 3
-            var y: u8 = 2
-            when (b) {
-                3 -> y+1
-            }
-        } 
     """.trimIndent())
 
     while (!lexer.isEOF()) {

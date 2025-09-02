@@ -27,13 +27,13 @@ data class WhenDecl(
     val elseWare: Block?=null
 ) : Node()
 
-data class Param(val name: String, val type: String)
+data class Param(val name: String, val type: String, val defaultValue: Expr?=null)
 
 // --- операторы ---
 data class VarDecl(val mutable: Boolean, val name: String, val type: String, val value: Expr) : Node()
 data class Assign(val target: String, val value: Expr) : Node()
 data class Return(val value: Expr) : Node()
-data class Block(val statements: List<Node>) : Node()
+data class Block(val statements: List<Node>, val ownScopeStack: Boolean=true) : Node()
 
 // --- выражения ---
 sealed class Expr : Node()

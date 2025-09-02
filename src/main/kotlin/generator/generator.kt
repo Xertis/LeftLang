@@ -42,13 +42,23 @@ class Generator(val program: Program) {
         }
     }
 
-    private fun genFunc(decl: FunDecl): String {
+    fun findFunDecl(name: String, root: List<Node>): FunDecl? {
+        for (decl in root) {
+            when (decl) {
+                is FunDecl -> if (decl.name == name) return decl
+                else -> {}
+            }
+        }
+        return null
+    }
+
+    private fun genFunc(decl: FunDecl, root: List<Node>): String {
         val params = mutableListOf<String>()
         for (param in decl.params) {
             val isUnsigned = if (isUnsigned(param.type)) "unsigned" else ""
             params += "$isUnsigned ${left2Ctype(param.type)} ${param.name}"
         }
-        val body = gen(decl.body)
+        val body = gen(decl.body, root)
         return "${left2Ctype(decl.returnType)} ${decl.name}${params.joinToString(
             separator = ",",
             prefix = "(",
@@ -56,44 +66,45 @@ class Generator(val program: Program) {
         )} {\n$body\n}\n"
     }
 
-    private fun genElse(decl: Block): String {
-        return "else {\n${gen(decl)}}"
+    private fun genElse(decl: Block, root: List<Node>): String {
+        return "else {\n${gen(decl, root)}}"
     }
 
-    private fun genLogic(decl: LogicDecl): String {
+    private fun genLogic(decl: LogicDecl, root: List<Node>): String {
         val name = if (decl.type == TokenTypes.KW_IF) "if" else "else if"
 
-        var fullLogicBlock = "$name ${gen(decl.logicExpr)} {\n${gen(decl.body)}}"
+        var fullLogicBlock = "$name ${gen(decl.logicExpr, root)} {\n${gen(decl.body, root)}}"
 
         if (decl.middlewares != null) {
             for (ware in decl.middlewares) {
-                fullLogicBlock += genLogic(ware)
+                fullLogicBlock += genLogic(ware, root)
             }
         }
 
         if (decl.elseWare != null) {
-            fullLogicBlock += genElse(decl.elseWare)
+            fullLogicBlock += genElse(decl.elseWare, root)
         }
 
         return fullLogicBlock
     }
 
-    private fun genWhen(decl: WhenDecl): String {
+    private fun genWhen(decl: WhenDecl, root: List<Node>): String {
         val code = StringBuilder()
 
         for (ware in decl.middlewares) {
-            code.append(genLogic(ware))
+            code.append(genLogic(ware, root))
         }
 
-        if (decl.elseWare != null) code.append(genElse(decl.elseWare))
+        if (decl.elseWare != null) code.append(genElse(decl.elseWare, root))
 
         return code.toString()
     }
 
-    private fun genBlock(decl: Block): String {
+    private fun genBlock(decl: Block, root: List<Node>): String {
         val code = StringBuilder()
+        val blockRoot = if (decl.ownScopeStack) decl.statements else root
         for (dec in decl.statements) {
-            code.append(gen(dec))
+            code.append(gen(dec, blockRoot))
             when (dec) {
                 is VarDecl, is CallExpr, is Return, is Assign -> code.append(";\n")
                 else -> code.append("\n")
@@ -102,50 +113,70 @@ class Generator(val program: Program) {
         return code.toString()
     }
 
-    private fun genVar(decl: VarDecl): String {
+    private fun genVar(decl: VarDecl, root: List<Node>): String {
         val isUnsigned = if (isUnsigned(decl.type)) "unsigned" else ""
-        return "$isUnsigned ${left2Ctype(decl.type)} ${decl.name} = ${gen(decl.value)}"
+        return "$isUnsigned ${left2Ctype(decl.type)} ${decl.name} = ${gen(decl.value, root)}"
     }
 
-    private fun genCall(decl: CallExpr): String {
-        val args = decl.args.joinToString(
+    private fun genCallArg(decl: Expr, index: Int, root: List<Node>): String {
+        return ""
+    }
+
+    private fun genCall(decl: CallExpr, root: List<Node>): String {
+        val funDecl = findFunDecl(decl.name, root) ?: findFunDecl(decl.name,program.decls)
+
+        val declArgs = decl.args.toMutableList()
+
+        if (funDecl != null && declArgs.size != funDecl.params.size) {
+            val len = declArgs.size
+            for ( (index, param) in funDecl.params.withIndex() ) {
+                if (index < len) continue
+
+                if (param.defaultValue == null) throw RuntimeException("Передано неверное кол-во аргументов")
+
+                declArgs += param.defaultValue
+            }
+        }
+
+        val args = declArgs.joinToString(
             separator = ",",
             prefix = "(",
             postfix = ")"
-        ) { gen(it) }
+        ) { gen(it, root) }
+
         return "${decl.name}$args"
     }
 
-    private fun genInclude(decl: Include): String {
+    private fun genInclude(decl: Include, root: List<Node>): String {
         val prefix = if (decl.isStd) '<' else '"'
         val postfix = if (decl.isStd) '>' else '"'
         return "include $prefix${decl.path}$postfix\n"
     }
 
-    private fun gen(decl: Node): String {
+    private fun gen(decl: Node, root: List<Node>): String {
         return when (decl) {
-            is Assign -> "${decl.target} = ${gen(decl.value)}"
-            is Block -> genBlock(decl)
+            is Assign -> "${decl.target} = ${gen(decl.value, root)}"
+            is Block -> genBlock(decl, root)
             is ConstDecl -> throw RuntimeException("не реализован $decl")
-            is BinaryExpr -> "(${gen(decl.left)} ${decl.op} ${gen(decl.right)})"
-            is CallExpr -> genCall(decl)
-            is Include -> genInclude(decl)
+            is BinaryExpr -> "(${gen(decl.left, root)} ${decl.op} ${gen(decl.right, root)})"
+            is CallExpr -> genCall(decl, root)
+            is Include -> genInclude(decl, root)
             is Literal -> "${decl.value}"
-            is PreProcDecl -> "#" + gen(decl.directive) + "\n"
+            is PreProcDecl -> "#" + gen(decl.directive, root) + "\n"
             is VarRef -> decl.name
-            is FunDecl -> genFunc(decl)
+            is FunDecl -> genFunc(decl, root)
             is Program -> throw RuntimeException("не реализован $decl")
-            is Return -> "return ${gen(decl.value)}"
-            is VarDecl -> genVar(decl)
-            is LogicDecl -> genLogic(decl)
-            is WhenDecl -> genWhen(decl)
+            is Return -> "return ${gen(decl.value, root)}"
+            is VarDecl -> genVar(decl, root)
+            is LogicDecl -> genLogic(decl, root)
+            is WhenDecl -> genWhen(decl, root)
         }
     }
 
     fun startGen(): String {
         val code = StringBuilder()
         for (dec in program.decls) {
-            code.append(gen(dec))
+            code.append(gen(dec, program.decls))
 
             if (dec is VarDecl) code.append(";\n")
         }

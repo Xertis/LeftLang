@@ -49,20 +49,20 @@ class Parser(val tokens: List<Token>) {
     private fun parseIf(): LogicDecl {
         expect(TokenTypes.KW_IF)
         val condition = parseExpr()
-        val body = parseBlock()
+        val body = parseBlock(false)
         val elifs = mutableListOf<LogicDecl>()
 
         while (peek()?.type == TokenTypes.KW_ELIF) {
             advance()
             val elifCond = parseExpr()
-            val elifBody = parseBlock()
+            val elifBody = parseBlock(false)
             elifs.add(LogicDecl(TokenTypes.KW_ELIF, elifCond, elifBody))
         }
 
         var elseBlock: Block? = null
         if (peek()?.type == TokenTypes.KW_ELSE) {
             advance()
-            elseBlock = parseBlock()
+            elseBlock = parseBlock(false)
         }
 
         return LogicDecl(TokenTypes.KW_IF, condition, body, elifs.ifEmpty { null }, elseBlock)
@@ -95,9 +95,9 @@ class Parser(val tokens: List<Token>) {
 
                 var body: Block? = null
                 if (peek()?.type == TokenTypes.LBRACE) {
-                    body = parseBlock()
+                    body = parseBlock(false)
                 } else if (variable is VarRef) {
-                    body = Block(listOf(Assign(variable.name, parseExpr())))
+                    body = Block(listOf(Assign(variable.name, parseExpr())), false)
                 } else {
                     throw RuntimeException("Невозможно присвоить значение НЕ переменной")
                 }
@@ -148,8 +148,23 @@ class Parser(val tokens: List<Token>) {
             val pname = expect(TokenTypes.IDENT)!!.value
             expect(TokenTypes.COL)
             val ptype = expect(TokenGroups.VARTYPE)!!.value
-            params.add(Param(pname, ptype))
+            var defaultValue: Literal? = null
+
+            if (peek()?.type == TokenTypes.EQ) {
+                advance()
+                val expr = parseExpr()
+
+                if (expr !is Literal) {
+                    throw RuntimeException("Единственное допустимое значение дефолтного значения аргумента функции - Литерал")
+                }
+
+                defaultValue = expr
+
+            }
+
             if (peek()?.type == TokenTypes.COMMA) advance()
+
+            params.add(Param(pname, ptype, defaultValue))
         }
 
         expect(TokenTypes.RPAREN)
@@ -164,14 +179,14 @@ class Parser(val tokens: List<Token>) {
         return FunDecl(name, returnType, params, body)
     }
 
-    private fun parseBlock(): Block {
+    private fun parseBlock(ownScopeStack: Boolean=true): Block {
         expect(TokenTypes.LBRACE)
         val stmts = mutableListOf<Node>()
         while (peek()?.type != TokenTypes.RBRACE && !isEOF()) {
             stmts.add(parseStatement())
         }
         expect(TokenTypes.RBRACE)
-        return Block(stmts)
+        return Block(stmts, ownScopeStack)
     }
 
     private fun parseReturn(): Return {
