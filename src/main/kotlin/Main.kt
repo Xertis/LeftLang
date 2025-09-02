@@ -6,16 +6,19 @@ fun main() {
     val lexer = Lexer(source = """
 #include <stdio.h>
 
-fun main() -> i32 {
-    fun sum(a: i32=0, b: i32=0) -> i32 {
-        return a+b
-    }
-    
-   printf("%d", sum(b=5, 1))
-
-  return 0
+fun print_num(x: i32=0) {
+  printf("%d", x)
 }
-        
+
+fun sum(a: i32, b: i32) -> i32 {
+  return a+b
+}
+
+fun main() -> i32 {
+  print_num() // Дефолтное значение
+  print_num(sum(b = 5, 10))
+  return 0
+} 
     """.trimIndent())
 
     while (!lexer.isEOF()) {
