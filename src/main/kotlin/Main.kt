@@ -6,12 +6,12 @@ fun main() {
     val lexer = Lexer(source = """
 #include <stdio.h>
 
-fun sum(a: f64, b: f64=1+2) -> f64 {
-    return a+b
-}
-
 fun main() -> i32 {
-  sum(6, 5)
+    fun sum(a: i32=0, b: i32=0) -> i32 {
+        return a+b
+    }
+    
+   printf("%d", sum(b=5, 1))
 
   return 0
 }

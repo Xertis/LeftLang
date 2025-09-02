@@ -1,5 +1,6 @@
 package generator
 
+import parser.Arg
 import parser.Assign
 import parser.BinaryExpr
 import parser.Block
@@ -118,33 +119,47 @@ class Generator(val program: Program) {
         return "$isUnsigned ${left2Ctype(decl.type)} ${decl.name} = ${gen(decl.value, root)}"
     }
 
-    private fun genCallArg(decl: Expr, index: Int, root: List<Node>): String {
-        return ""
-    }
-
     private fun genCall(decl: CallExpr, root: List<Node>): String {
-        val funDecl = findFunDecl(decl.name, root) ?: findFunDecl(decl.name,program.decls)
+        val funDecl = findFunDecl(decl.name, root) ?: findFunDecl(decl.name, program.decls)
 
-        val declArgs = decl.args.toMutableList()
+        if (funDecl == null) {
+            val argsStr = decl.args.joinToString(
+                separator = ", ",
+                prefix = "(",
+                postfix = ")"
+            ) { gen(it, root) }
+            return "${decl.name}$argsStr"
+        }
 
-        if (funDecl != null && declArgs.size != funDecl.params.size) {
-            val len = declArgs.size
-            for ( (index, param) in funDecl.params.withIndex() ) {
-                if (index < len) continue
+        val namedArgs = mutableMapOf<String, Expr>()
+        val notNamedArgs = mutableListOf<Expr>()
 
-                if (param.defaultValue == null) throw RuntimeException("Передано неверное кол-во аргументов")
-
-                declArgs += param.defaultValue
+        for (arg in decl.args) {
+            when (arg) {
+                is Arg -> namedArgs[arg.name] = arg.value
+                else -> notNamedArgs += arg
             }
         }
 
-        val args = declArgs.joinToString(
-            separator = ",",
+        val finalArgs = mutableListOf<Expr>()
+        var posIndex = 0
+
+        for (param in funDecl.params) {
+            finalArgs += when {
+                posIndex < notNamedArgs.size -> notNamedArgs[posIndex++]
+                namedArgs.containsKey(param.name) -> namedArgs[param.name]!!
+                param.defaultValue != null -> param.defaultValue
+                else -> throw RuntimeException("Передано неверное кол-во аргументов")
+            }
+        }
+
+        val argsStr = finalArgs.joinToString(
+            separator = ", ",
             prefix = "(",
             postfix = ")"
         ) { gen(it, root) }
 
-        return "${decl.name}$args"
+        return "${decl.name}$argsStr"
     }
 
     private fun genInclude(decl: Include, root: List<Node>): String {
@@ -170,6 +185,7 @@ class Generator(val program: Program) {
             is VarDecl -> genVar(decl, root)
             is LogicDecl -> genLogic(decl, root)
             is WhenDecl -> genWhen(decl, root)
+            is Arg -> "${decl.name} = ${gen(decl.value, root)}"
         }
     }
 

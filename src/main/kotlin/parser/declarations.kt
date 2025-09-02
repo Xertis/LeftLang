@@ -28,6 +28,7 @@ data class WhenDecl(
 ) : Node()
 
 data class Param(val name: String, val type: String, val defaultValue: Expr?=null)
+data class Arg(val name: String, val value: Expr): Expr()
 
 // --- операторы ---
 data class VarDecl(val mutable: Boolean, val name: String, val type: String, val value: Expr) : Node()

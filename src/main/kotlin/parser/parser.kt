@@ -202,6 +202,13 @@ class Parser(val tokens: List<Token>) {
         return Assign(name, expr)
     }
 
+    private fun parseArg(): Arg {
+        val name = expect(TokenTypes.IDENT)!!.value
+        expect(TokenTypes.EQ)
+        val expr = parseExpr()
+        return Arg(name, expr)
+    }
+
     private fun parseCall(): CallExpr {
         val name = expect(TokenTypes.IDENT)!!.value
         expect(TokenTypes.LPAREN)
@@ -311,6 +318,9 @@ class Parser(val tokens: List<Token>) {
                     }
                     expect(TokenTypes.RPAREN)
                     CallExpr(name, args)
+                } else if (peek()?.type == TokenTypes.EQ) {
+                    back()
+                    parseArg()
                 } else {
                     VarRef(name)
                 }
