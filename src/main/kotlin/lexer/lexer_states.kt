@@ -156,6 +156,7 @@ fun bindStates(fsm: Fsm): Fsm {
                 ">" -> lexer.putToken(TokenTypes.GT, lexer.buffer)
                 "=" -> lexer.putToken(TokenTypes.EQ, lexer.buffer)
                 "!" -> lexer.putToken(TokenTypes.NOT, lexer.buffer)
+                "&" -> lexer.putToken(TokenTypes.LINK, lexer.buffer)
                 "+=" -> lexer.putToken(TokenTypes.PLUSEQ, lexer.buffer)
                 "-=" -> lexer.putToken(TokenTypes.MINUSEQ, lexer.buffer)
                 "*=" -> lexer.putToken(TokenTypes.MULEQ, lexer.buffer)

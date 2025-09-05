@@ -6,17 +6,17 @@ fun main() {
     val lexer = Lexer(source = """
 #include <stdio.h>
 
-fun print_num(x: i32=0) {
-  printf("%d", x)
-}
-
-fun sum(a: i32, b: i32) -> i32 {
-  return a+b
+fun disk(a: f64, b: f64, c: f64) -> f64 {
+    return b*b-4*a*c
 }
 
 fun main() -> i32 {
-  print_num() // Дефолтное значение
-  print_num(sum(b = 5, 10))
+  var a: f64 = 0
+  var b: f64 = 0
+  var c: f64 = 0
+  
+  var count: u16 = scanf("%lf %lf %lf", &a, &b, &c)
+  printf("%f", disk(a, b, c) )
   return 0
 } 
     """.trimIndent())

@@ -33,6 +33,7 @@ data class Arg(val name: String, val value: Expr): Expr()
 // --- операторы ---
 data class VarDecl(val mutable: Boolean, val name: String, val type: String, val value: Expr) : Node()
 data class Assign(val target: String, val value: Expr) : Node()
+data class VarBinaryExpr(val variable: VarRef, val op: String, val expr: Expr): Node()
 data class Return(val value: Expr) : Node()
 data class Block(val statements: List<Node>, val ownScopeStack: Boolean=true) : Node()
 
@@ -40,6 +41,7 @@ data class Block(val statements: List<Node>, val ownScopeStack: Boolean=true) : 
 sealed class Expr : Node()
 data class Literal(val value: Any) : Expr()
 data class VarRef(val name: String) : Expr()
+data class VarLink(val ref: VarRef): Expr()
 data class BinaryExpr(val left: Expr, val op: String, val right: Expr) : Expr()
 data class CallExpr(val name: String, val args: List<Expr>) : Expr()
 

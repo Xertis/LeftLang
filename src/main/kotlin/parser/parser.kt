@@ -38,8 +38,14 @@ class Parser(val tokens: List<Token>) {
             TokenTypes.PP_INCLUDE -> parsePreProc()
             TokenTypes.KW_WHEN -> parseWhen()
             TokenTypes.IDENT -> {
-                if (peek(offset = 1)?.type == TokenTypes.EQ) parseAssign()
-                else parseCall()
+                when (peek(offset = 1)?.type) {
+                    TokenTypes.EQ -> parseAssign()
+                    TokenTypes.PLUSEQ,
+                    TokenTypes.MINUSEQ,
+                    TokenTypes.MULEQ,
+                    TokenTypes.DIVEQ -> parseVarBinaryExp()
+                    else -> parseCall()
+                }
             }
             else -> throw RuntimeException("Неожиданный токен: ${peek()}")
         }
@@ -129,10 +135,10 @@ class Parser(val tokens: List<Token>) {
     }
 
     private fun parseConstDecl(): ConstDecl {
-        advance() // const
+        expect(TokenTypes.CONST)
         val name = expect(TokenTypes.IDENT)!!.value
         expect(TokenTypes.COL)
-        val type = expect(TokenTypes.IDENT)!!.value
+        val type = expect(TokenGroups.VARTYPE)!!.value
         expect(TokenTypes.EQ)
         val value = parseExpr()
         return ConstDecl(name, type, value)
@@ -193,6 +199,21 @@ class Parser(val tokens: List<Token>) {
         expect(TokenTypes.KW_RETURN)
         val expr = parseExpr()
         return Return(expr)
+    }
+
+    private fun parseVarBinaryExp(): VarBinaryExpr {
+        val name = expect(TokenTypes.IDENT)!!.value
+        val opToken = advance()!!
+
+        val expr = parseExpr()
+
+        return when (opToken.type) {
+            TokenTypes.PLUSEQ -> VarBinaryExpr(VarRef(name),"+=", expr)
+            TokenTypes.MINUSEQ -> VarBinaryExpr(VarRef(name),"-=", expr)
+            TokenTypes.MULEQ -> VarBinaryExpr(VarRef(name),"*=", expr)
+            TokenTypes.DIVEQ -> VarBinaryExpr(VarRef(name),"/=", expr)
+            else -> throw RuntimeException("Ожидался оператор присваивания, а встретился ${opToken.type}")
+        }
     }
 
     private fun parseAssign(): Assign {
@@ -307,6 +328,9 @@ class Parser(val tokens: List<Token>) {
             TokenTypes.KW_FALSE -> Literal("0")
             TokenTypes.STRING -> Literal("\"${token.value}\"")
             TokenTypes.CHAR -> Literal("'${token.value}'")
+            TokenTypes.LINK -> {
+                VarLink(VarRef(expect(TokenTypes.IDENT)!!.value))
+            }
             TokenTypes.IDENT -> {
                 val name = token.value
                 if (peek()?.type == TokenTypes.LPAREN) {

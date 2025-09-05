@@ -15,7 +15,9 @@ import parser.Node
 import parser.PreProcDecl
 import parser.Program
 import parser.Return
+import parser.VarBinaryExpr
 import parser.VarDecl
+import parser.VarLink
 import parser.VarRef
 import parser.WhenDecl
 import tokens.Token
@@ -107,7 +109,7 @@ class Generator(val program: Program) {
         for (dec in decl.statements) {
             code.append(gen(dec, blockRoot))
             when (dec) {
-                is VarDecl, is CallExpr, is Return, is Assign -> code.append(";\n")
+                is VarDecl, is CallExpr, is Return, is Assign, is VarBinaryExpr -> code.append(";\n")
                 else -> code.append("\n")
             }
         }
@@ -117,6 +119,11 @@ class Generator(val program: Program) {
     private fun genVar(decl: VarDecl, root: List<Node>): String {
         val isUnsigned = if (isUnsigned(decl.type)) "unsigned" else ""
         return "$isUnsigned ${left2Ctype(decl.type)} ${decl.name} = ${gen(decl.value, root)}"
+    }
+
+    private fun genConst(decl: ConstDecl, root: List<Node>): String {
+        val isUnsigned = if (isUnsigned(decl.type)) "unsigned" else ""
+        return "const $isUnsigned ${left2Ctype(decl.type)} ${decl.name} = ${gen(decl.value, root)}"
     }
 
     private fun genCall(decl: CallExpr, root: List<Node>): String {
@@ -172,7 +179,7 @@ class Generator(val program: Program) {
         return when (decl) {
             is Assign -> "${decl.target} = ${gen(decl.value, root)}"
             is Block -> genBlock(decl, root)
-            is ConstDecl -> throw RuntimeException("не реализован $decl")
+            is ConstDecl -> genConst(decl, root)
             is BinaryExpr -> "(${gen(decl.left, root)} ${decl.op} ${gen(decl.right, root)})"
             is CallExpr -> genCall(decl, root)
             is Include -> genInclude(decl, root)
@@ -186,6 +193,8 @@ class Generator(val program: Program) {
             is LogicDecl -> genLogic(decl, root)
             is WhenDecl -> genWhen(decl, root)
             is Arg -> "${decl.name} = ${gen(decl.value, root)}"
+            is VarBinaryExpr -> "${gen(decl.variable, root)} ${decl.op} ${gen(decl.expr, root)}"
+            is VarLink -> "&${gen(decl.ref, root)}"
         }
     }
 
@@ -194,7 +203,7 @@ class Generator(val program: Program) {
         for (dec in program.decls) {
             code.append(gen(dec, program.decls))
 
-            if (dec is VarDecl) code.append(";\n")
+            if (dec is VarDecl || dec is ConstDecl) code.append(";\n")
         }
         return code.toString()
     }
