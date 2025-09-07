@@ -8,8 +8,8 @@ enum class TokenTypes {
     KW_FUN, KW_RETURN,
     KW_WHILE, KW_FOR,
     KW_TRUE, KW_FALSE,
-    PLUS, MINUS, MUL, DIV,
-    PLUSEQ, MINUSEQ, MULEQ, DIVEQ, // +=, -=, *=, /=
+    PLUS, MINUS, MUL, DIV, MOD,
+    PLUSEQ, MINUSEQ, MULEQ, DIVEQ, MODEQ, // +=, -=, *=, /= %=
     INC, DEC,
     EQ, EQEQ, BANGEQ, LT, GT, LTE, GTE, //=, ==, !=, <, >, <=, >=
     AND, OR, NOT,

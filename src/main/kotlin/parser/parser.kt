@@ -43,7 +43,8 @@ class Parser(val tokens: List<Token>) {
                     TokenTypes.PLUSEQ,
                     TokenTypes.MINUSEQ,
                     TokenTypes.MULEQ,
-                    TokenTypes.DIVEQ -> parseVarBinaryExp()
+                    TokenTypes.DIVEQ,
+                    TokenTypes.MODEQ -> parseVarBinaryExp()
                     else -> parseCall()
                 }
             }
@@ -212,6 +213,7 @@ class Parser(val tokens: List<Token>) {
             TokenTypes.MINUSEQ -> VarBinaryExpr(VarRef(name),"-=", expr)
             TokenTypes.MULEQ -> VarBinaryExpr(VarRef(name),"*=", expr)
             TokenTypes.DIVEQ -> VarBinaryExpr(VarRef(name),"/=", expr)
+            TokenTypes.MODEQ -> VarBinaryExpr(VarRef(name),"%=", expr)
             else -> throw RuntimeException("Ожидался оператор присваивания, а встретился ${opToken.type}")
         }
     }
@@ -292,7 +294,7 @@ class Parser(val tokens: List<Token>) {
 
     private fun parseMulDiv(): Expr {
         var expr = parseUnary()
-        while (peek()?.type == TokenTypes.MUL || peek()?.type == TokenTypes.DIV) {
+        while (peek()?.type == TokenTypes.MUL || peek()?.type == TokenTypes.DIV || peek()?.type == TokenTypes.MOD) {
             val op = advance()!!.value
             val right = parseUnary()
             expr = BinaryExpr(expr, op, right)

@@ -23,10 +23,11 @@ import parser.WhenDecl
 import tokens.Token
 
 class Generator(val program: Program) {
-    private fun isUnsigned(type: String): Boolean {
+    private fun isUnsigned(type: String): Boolean? {
         return when (type) {
             "u8", "u16", "u32", "u64", "usize" -> true
-            else -> false
+            "i8", "i16", "i32", "i64", "isize" -> false
+            else -> null
         }
     }
 
@@ -58,8 +59,13 @@ class Generator(val program: Program) {
     private fun genFunc(decl: FunDecl, root: List<Node>): String {
         val params = mutableListOf<String>()
         for (param in decl.params) {
-            val isUnsigned = if (isUnsigned(param.type)) "unsigned" else ""
-            params += "$isUnsigned ${left2Ctype(param.type)} ${param.name}"
+            val isUnsigned = isUnsigned(param.type)
+            val sign = when (isUnsigned) {
+                true -> "unsigned"
+                false -> "signed"
+                null -> ""
+            }
+            params += "$sign ${left2Ctype(param.type)} ${param.name}"
         }
         val body = gen(decl.body, root)
         return "${left2Ctype(decl.returnType)} ${decl.name}${params.joinToString(
@@ -117,13 +123,23 @@ class Generator(val program: Program) {
     }
 
     private fun genVar(decl: VarDecl, root: List<Node>): String {
-        val isUnsigned = if (isUnsigned(decl.type)) "unsigned" else ""
-        return "$isUnsigned ${left2Ctype(decl.type)} ${decl.name} = ${gen(decl.value, root)}"
+        val isUnsigned = isUnsigned(decl.type)
+        val sign = when (isUnsigned) {
+            true -> "unsigned"
+            false -> "signed"
+            null -> ""
+        }
+        return "$sign ${left2Ctype(decl.type)} ${decl.name} = ${gen(decl.value, root)}"
     }
 
     private fun genConst(decl: ConstDecl, root: List<Node>): String {
-        val isUnsigned = if (isUnsigned(decl.type)) "unsigned" else ""
-        return "const $isUnsigned ${left2Ctype(decl.type)} ${decl.name} = ${gen(decl.value, root)}"
+        val isUnsigned = isUnsigned(decl.type)
+        val sign = when (isUnsigned) {
+            true -> "unsigned"
+            false -> "signed"
+            null -> ""
+        }
+        return "const $sign ${left2Ctype(decl.type)} ${decl.name} = ${gen(decl.value, root)}"
     }
 
     private fun genCall(decl: CallExpr, root: List<Node>): String {

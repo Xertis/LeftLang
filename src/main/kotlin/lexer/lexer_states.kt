@@ -5,7 +5,7 @@ import scripts.utils.TokenBuffer
 import TokenTypes
 import TokenizerStates
 
-const val VALID_OPERATOR_SYMBOLS = "-+/*=<>&|!"
+const val VALID_OPERATOR_SYMBOLS = "-+/*%=<>&|!"
 const val VALID_DELIMETER_SYMBOLS = ":;(){}.,"
 
 fun bindStates(fsm: Fsm): Fsm {
@@ -152,6 +152,7 @@ fun bindStates(fsm: Fsm): Fsm {
                 "-" -> lexer.putToken(TokenTypes.MINUS, lexer.buffer)
                 "*" -> lexer.putToken(TokenTypes.MUL, lexer.buffer)
                 "/" -> lexer.putToken(TokenTypes.DIV, lexer.buffer)
+                "%" -> lexer.putToken(TokenTypes.MOD, lexer.buffer)
                 "<" -> lexer.putToken(TokenTypes.LT, lexer.buffer)
                 ">" -> lexer.putToken(TokenTypes.GT, lexer.buffer)
                 "=" -> lexer.putToken(TokenTypes.EQ, lexer.buffer)
@@ -161,6 +162,7 @@ fun bindStates(fsm: Fsm): Fsm {
                 "-=" -> lexer.putToken(TokenTypes.MINUSEQ, lexer.buffer)
                 "*=" -> lexer.putToken(TokenTypes.MULEQ, lexer.buffer)
                 "/=" -> lexer.putToken(TokenTypes.DIVEQ, lexer.buffer)
+                "%=" -> lexer.putToken(TokenTypes.MODEQ, lexer.buffer)
                 "<=" -> lexer.putToken(TokenTypes.LTE, lexer.buffer)
                 ">=" -> lexer.putToken(TokenTypes.GTE, lexer.buffer)
                 "==" -> lexer.putToken(TokenTypes.EQEQ, lexer.buffer)
