@@ -27,6 +27,11 @@ data class WhenDecl(
     val elseWare: Block?=null
 ) : Node()
 
+data class WhileDecl(
+    val expr: Expr,
+    val body: Block
+) : Node()
+
 data class Param(val name: String, val type: String, val defaultValue: Expr?=null)
 data class Arg(val name: String, val value: Expr): Expr()
 

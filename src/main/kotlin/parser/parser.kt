@@ -37,6 +37,7 @@ class Parser(val tokens: List<Token>) {
             TokenTypes.KW_RETURN -> parseReturn()
             TokenTypes.PP_INCLUDE -> parsePreProc()
             TokenTypes.KW_WHEN -> parseWhen()
+            TokenTypes.KW_WHILE -> parseWhile()
             TokenTypes.IDENT -> {
                 when (peek(offset = 1)?.type) {
                     TokenTypes.EQ -> parseAssign()
@@ -73,6 +74,13 @@ class Parser(val tokens: List<Token>) {
         }
 
         return LogicDecl(TokenTypes.KW_IF, condition, body, elifs.ifEmpty { null }, elseBlock)
+    }
+
+    private fun parseWhile(): WhileDecl {
+        expect(TokenTypes.KW_WHILE)
+        val logic = parseExpr()
+        val body = parseBlock(false)
+        return WhileDecl(logic, body)
     }
 
     private fun parseWhen(): WhenDecl {

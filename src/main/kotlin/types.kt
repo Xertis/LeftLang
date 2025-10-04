@@ -6,7 +6,7 @@ enum class TokenTypes {
     KW_BOOL, KW_STRING, KW_VOID,
     KW_IF, KW_ELSE, KW_ELIF, KW_WHEN,
     KW_FUN, KW_RETURN,
-    KW_WHILE, KW_FOR,
+    KW_WHILE, KW_FOR, KW_BREAK, KW_CONTINUE,
     KW_TRUE, KW_FALSE,
     PLUS, MINUS, MUL, DIV, MOD,
     PLUSEQ, MINUSEQ, MULEQ, DIVEQ, MODEQ, // +=, -=, *=, /= %=

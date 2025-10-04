@@ -20,6 +20,7 @@ import parser.VarDecl
 import parser.VarLink
 import parser.VarRef
 import parser.WhenDecl
+import parser.WhileDecl
 import tokens.Token
 
 class Generator(val program: Program) {
@@ -107,6 +108,14 @@ class Generator(val program: Program) {
         if (decl.elseWare != null) code.append(genElse(decl.elseWare, root))
 
         return code.toString()
+    }
+
+    private fun genWhile(decl: WhileDecl, root: List<Node>): String {
+        var logic = gen(decl.expr, root)
+        if (logic.first() != '(') logic = "($logic)"
+
+        val body = gen(decl.body, root)
+        return "while $logic {\n$body}\n"
     }
 
     private fun genBlock(decl: Block, root: List<Node>): String {
@@ -211,6 +220,7 @@ class Generator(val program: Program) {
             is Arg -> "${decl.name} = ${gen(decl.value, root)}"
             is VarBinaryExpr -> "${gen(decl.variable, root)} ${decl.op} ${gen(decl.expr, root)}"
             is VarLink -> "&${gen(decl.ref, root)}"
+            is WhileDecl -> "${genWhile(decl, root)}"
         }
     }
 

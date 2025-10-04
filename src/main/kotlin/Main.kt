@@ -6,17 +6,14 @@ fun main() {
     val lexer = Lexer(source = """
 #include <stdio.h>
 
-fun disk(a: f64, b: f64, c: f64) -> f64 {
-    return b*b-4*a*c
-}
-
 fun main() -> i32 {
-  var a: f64 = 0
-  var b: f64 = 0
-  var c: f64 = 0
+  var s: i32 = 0
+  var x: i32 = s
   
-  var count: u16 = scanf("%lf %lf %lf", &a, &b, &c)
-  printf("%f", disk(a, b, c) )
+  while scanf("%d", &x) == 1 && x != 0 {
+    if x % 2 == 0 {s += x}
+  }
+  printf("s = %d\n", s)
   return 0
 } 
     """.trimIndent())

@@ -112,6 +112,9 @@ fun bindStates(fsm: Fsm): Fsm {
                 "for" -> lexer.putToken(TokenTypes.KW_FOR, lexer.buffer)
                 "while" -> lexer.putToken(TokenTypes.KW_WHILE, lexer.buffer)
 
+                "break" -> lexer.putToken(TokenTypes.KW_BREAK, lexer.buffer)
+                "continue" -> lexer.putToken(TokenTypes.KW_CONTINUE, lexer.buffer)
+
                 "true" -> lexer.putToken(TokenTypes.KW_TRUE, lexer.buffer)
                 "false" -> lexer.putToken(TokenTypes.KW_FALSE, lexer.buffer)
 
