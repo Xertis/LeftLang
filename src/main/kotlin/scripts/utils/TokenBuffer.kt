@@ -31,4 +31,8 @@ class TokenBuffer(val ln: Int, val col: Int) {
         buffer = ""
         length = 0
     }
+
+    fun isEmpty(): Boolean {
+        return buffer.isEmpty()
+    }
 }

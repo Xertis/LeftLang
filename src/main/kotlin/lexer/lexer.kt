@@ -5,12 +5,16 @@ import tokens.Token
 import scripts.utils.Fsm
 import scripts.utils.TokenBuffer
 
-class Lexer(override val source: String) : LexerInterface {
+class Lexer(override var source: String) : LexerInterface {
     override var pos: Int = 0
     override var col: Int = 1
     override var line: Int = 1
     override var tokens = mutableListOf<Token>()
     override var buffer = TokenBuffer(0, 0)
+
+    init {
+        source += " "
+    }
 
     val fsm = bindStates(Fsm(this))
 

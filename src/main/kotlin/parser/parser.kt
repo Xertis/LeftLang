@@ -38,6 +38,7 @@ class Parser(val tokens: List<Token>) {
             TokenTypes.PP_INCLUDE -> parsePreProc()
             TokenTypes.KW_WHEN -> parseWhen()
             TokenTypes.KW_WHILE -> parseWhile()
+            TokenTypes.KW_FOR -> parseFor()
             TokenTypes.IDENT -> {
                 when (peek(offset = 1)?.type) {
                     TokenTypes.EQ -> parseAssign()
@@ -83,51 +84,86 @@ class Parser(val tokens: List<Token>) {
         return WhileDecl(logic, body)
     }
 
+    private fun parseRange(): Range {
+        val startExpr = parseExpr()
+        expect(TokenTypes.RANGE)
+        val endExpr = parseExpr()
+        return Range(startExpr, endExpr, null)
+    }
+
+    private fun parseFor(): ForDecl {
+        expect(TokenTypes.KW_FOR)
+        expect(TokenTypes.LPAREN)
+
+        val variable = parseVarDecl()
+        expect(TokenTypes.KW_IN)
+        println("1и")
+
+        val range = parseRange()
+        range.name = variable.name
+
+        var stepExpr: Expr = Literal("1")
+        if (peek()?.type == TokenTypes.COMMA) {
+            advance()
+            stepExpr = parseExpr()
+        }
+
+        expect(TokenTypes.RPAREN)
+        val body = parseBlock(false)
+        println("ну и")
+        return ForDecl(
+            init = variable,
+            range = range,
+            step = stepExpr,
+            body = body
+        )
+    }
+
+
     private fun parseWhen(): WhenDecl {
         val middlewares = mutableListOf<LogicDecl>()
         var elseBlock: Block? = null
         expect(TokenTypes.KW_WHEN)
 
-        if (expect(TokenTypes.LPAREN, soft = true) != null) {
-            val variable = parseExpr()
-            expect(TokenTypes.RPAREN)
+        expect(TokenTypes.LPAREN)
+        val variable = parseExpr()
+        expect(TokenTypes.RPAREN)
 
-            expect(TokenTypes.LBRACE)
-            var isFirst = true
-            while (peek()?.type != TokenTypes.RBRACE && !isEOF()) {
-                val currentToken = peek()
-                val isElseBlock = currentToken?.type == TokenTypes.KW_ELSE
-                var expr: Expr? = null
-                if (!isElseBlock) {
-                    expr = parseExpr()
-                    if (expr !is BinaryExpr || !isLogicExpr(expr)) {
-                        expr = BinaryExpr(variable, "==", expr)
-                    }
-                } else {
-                    advance()
+        expect(TokenTypes.LBRACE)
+        var isFirst = true
+        while (peek()?.type != TokenTypes.RBRACE && !isEOF()) {
+            val currentToken = peek()
+            val isElseBlock = currentToken?.type == TokenTypes.KW_ELSE
+            var expr: Expr? = null
+            if (!isElseBlock) {
+                expr = parseExpr()
+                if (expr !is BinaryExpr || !isLogicExpr(expr)) {
+                    expr = BinaryExpr(variable, "==", expr)
                 }
-                expect(TokenTypes.ARROW)
+            } else {
+                advance()
+            }
+            expect(TokenTypes.ARROW)
 
-                var body: Block? = null
-                if (peek()?.type == TokenTypes.LBRACE) {
-                    body = parseBlock(false)
-                } else if (variable is VarRef) {
-                    body = Block(listOf(Assign(variable.name, parseExpr())), false)
-                } else {
-                    throw RuntimeException("Невозможно присвоить значение НЕ переменной")
-                }
-
-                if (!isElseBlock) {
-                    middlewares += LogicDecl(if (isFirst) TokenTypes.KW_IF else TokenTypes.KW_ELIF, expr!!, body)
-                } else {
-                    elseBlock = body
-                    break
-                }
-                isFirst = false
+            var body: Block? = null
+            if (peek()?.type == TokenTypes.LBRACE) {
+                body = parseBlock(false)
+            } else if (variable is VarRef) {
+                body = Block(listOf(Assign(variable.name, parseExpr())), false)
+            } else {
+                throw RuntimeException("Невозможно присвоить значение НЕ переменной")
             }
 
-            expect(TokenTypes.RBRACE)
+            if (!isElseBlock) {
+                middlewares += LogicDecl(if (isFirst) TokenTypes.KW_IF else TokenTypes.KW_ELIF, expr!!, body)
+            } else {
+                elseBlock = body
+                break
+            }
+            isFirst = false
         }
+
+        expect(TokenTypes.RBRACE)
 
         return WhenDecl(middlewares, elseBlock)
     }

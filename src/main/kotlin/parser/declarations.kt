@@ -32,6 +32,13 @@ data class WhileDecl(
     val body: Block
 ) : Node()
 
+data class ForDecl(
+    val init: VarDecl,
+    val range: Expr,
+    val step: Expr,
+    val body: Block
+) : Node()
+
 data class Param(val name: String, val type: String, val defaultValue: Expr?=null)
 data class Arg(val name: String, val value: Expr): Expr()
 
@@ -49,6 +56,7 @@ data class VarRef(val name: String) : Expr()
 data class VarLink(val ref: VarRef): Expr()
 data class BinaryExpr(val left: Expr, val op: String, val right: Expr) : Expr()
 data class CallExpr(val name: String, val args: List<Expr>) : Expr()
+data class Range(val start: Expr, val end: Expr, var name: String?) : Expr()
 
 // --- системное ---
 data class Include(val path: String, val isLeftScript: Boolean, val isStd: Boolean): Expr()

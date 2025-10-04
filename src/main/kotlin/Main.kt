@@ -7,15 +7,11 @@ fun main() {
 #include <stdio.h>
 
 fun main() -> i32 {
-  var s: i32 = 0
-  var x: i32 = s
-  
-  while scanf("%d", &x) == 1 && x != 0 {
-    if x % 2 == 0 {s += x}
+  for (var x: i32 = 10 in 0..10, -1) {
+    printf("%d\n", x)
   }
-  printf("s = %d\n", s)
   return 0
-} 
+}
     """.trimIndent())
 
     while (!lexer.isEOF()) {
@@ -23,6 +19,7 @@ fun main() -> i32 {
         lexer.toTokens()
     }
 
+    println(lexer.tokens)
     val parser = Parser(lexer.tokens)
     val program = parser.makeAst()
     println(program)

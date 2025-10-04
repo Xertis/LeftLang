@@ -7,6 +7,7 @@ import parser.Block
 import parser.CallExpr
 import parser.ConstDecl
 import parser.Expr
+import parser.ForDecl
 import parser.FunDecl
 import parser.Include
 import parser.Literal
@@ -14,6 +15,7 @@ import parser.LogicDecl
 import parser.Node
 import parser.PreProcDecl
 import parser.Program
+import parser.Range
 import parser.Return
 import parser.VarBinaryExpr
 import parser.VarDecl
@@ -118,6 +120,14 @@ class Generator(val program: Program) {
         return "while $logic {\n$body}\n"
     }
 
+    private fun genFor(decl: ForDecl, root: List<Node>): String {
+        val init = gen(decl.init, root)
+        val range = gen(decl.range, root)
+        val step = gen(decl.step, root)
+        val body = gen(decl.body, root)
+        return "for ($init; $range; ${decl.init.name} += ($step)) {\n$body}\n"
+    }
+
     private fun genBlock(decl: Block, root: List<Node>): String {
         val code = StringBuilder()
         val blockRoot = if (decl.ownScopeStack) decl.statements else root
@@ -200,6 +210,14 @@ class Generator(val program: Program) {
         return "include $prefix${decl.path}$postfix\n"
     }
 
+    private fun genRange(decl: Range, root: List<Node>): String {
+        val name = decl.name ?: "0"
+        val start = gen(decl.start, root)
+        val end = gen(decl.end, root)
+
+        return "($name >= $start && $name <= $end)"
+    }
+
     private fun gen(decl: Node, root: List<Node>): String {
         return when (decl) {
             is Assign -> "${decl.target} = ${gen(decl.value, root)}"
@@ -220,7 +238,9 @@ class Generator(val program: Program) {
             is Arg -> "${decl.name} = ${gen(decl.value, root)}"
             is VarBinaryExpr -> "${gen(decl.variable, root)} ${decl.op} ${gen(decl.expr, root)}"
             is VarLink -> "&${gen(decl.ref, root)}"
-            is WhileDecl -> "${genWhile(decl, root)}"
+            is WhileDecl -> genWhile(decl, root)
+            is ForDecl -> genFor(decl, root)
+            is Range -> genRange(decl, root)
         }
     }
 

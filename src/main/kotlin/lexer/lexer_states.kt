@@ -184,7 +184,9 @@ fun bindStates(fsm: Fsm): Fsm {
     fsm.addMiddleware(TokenizerStates.IN_DELIMETER, fun (lexer: LexerInterface): TokenizerStates? {
         val ch = lexer.peek()
 
-        if (ch in VALID_DELIMETER_SYMBOLS && lexer.buffer.length < 2) {
+        if (ch in VALID_DELIMETER_SYMBOLS &&
+            (lexer.buffer.isEmpty() || (lexer.buffer.get() == "." && ch == '.'))
+        ) {
             lexer.buffer.append(ch)
             lexer.advance()
             return null
