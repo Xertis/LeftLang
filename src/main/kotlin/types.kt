@@ -8,12 +8,13 @@ enum class TokenTypes {
     KW_FUN, KW_RETURN,
     KW_WHILE, KW_FOR, KW_BREAK, KW_CONTINUE,
     KW_TRUE, KW_FALSE,
+    KW_IN,
     PLUS, MINUS, MUL, DIV, MOD,
     PLUSEQ, MINUSEQ, MULEQ, DIVEQ, MODEQ, // +=, -=, *=, /= %=
     INC, DEC,
     EQ, EQEQ, BANGEQ, LT, GT, LTE, GTE, //=, ==, !=, <, >, <=, >=
     AND, OR, NOT,
-    LPAREN, RPAREN, LBRACE, RBRACE, COMMA, SEMI, COL, DOT, //(){},;:.
+    LPAREN, RPAREN, LBRACE, RBRACE, COMMA, SEMI, COL, DOT, RANGE, //(){},;:. ..
     ARROW,
     NEW_LINE, PP_INCLUDE, EOF
 

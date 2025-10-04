@@ -115,6 +115,8 @@ fun bindStates(fsm: Fsm): Fsm {
                 "break" -> lexer.putToken(TokenTypes.KW_BREAK, lexer.buffer)
                 "continue" -> lexer.putToken(TokenTypes.KW_CONTINUE, lexer.buffer)
 
+                "in" -> lexer.putToken(TokenTypes.KW_IN, lexer.buffer)
+
                 "true" -> lexer.putToken(TokenTypes.KW_TRUE, lexer.buffer)
                 "false" -> lexer.putToken(TokenTypes.KW_FALSE, lexer.buffer)
 
@@ -182,8 +184,11 @@ fun bindStates(fsm: Fsm): Fsm {
     fsm.addMiddleware(TokenizerStates.IN_DELIMETER, fun (lexer: LexerInterface): TokenizerStates? {
         val ch = lexer.peek()
 
-         if (ch in VALID_DELIMETER_SYMBOLS) {
-             lexer.buffer.append(ch)
+        if (ch in VALID_DELIMETER_SYMBOLS && lexer.buffer.length < 2) {
+            lexer.buffer.append(ch)
+            lexer.advance()
+            return null
+        } else {
             when (lexer.buffer.get()) {
                 ":" -> lexer.putToken(TokenTypes.COL, lexer.buffer)
                 "." -> lexer.putToken(TokenTypes.DOT, lexer.buffer)
@@ -193,10 +198,11 @@ fun bindStates(fsm: Fsm): Fsm {
                 ")" -> lexer.putToken(TokenTypes.RPAREN, lexer.buffer)
                 "{" -> lexer.putToken(TokenTypes.LBRACE, lexer.buffer)
                 "}" -> lexer.putToken(TokenTypes.RBRACE, lexer.buffer)
+                ".." -> lexer.putToken(TokenTypes.RANGE, lexer.buffer)
             }
+
+            return TokenizerStates.DEFAULT
         }
-        lexer.advance()
-        return TokenizerStates.DEFAULT
     })
 
     fsm.addMiddleware(TokenizerStates.IN_PREPROC, fun (lexer: LexerInterface): TokenizerStates? {
