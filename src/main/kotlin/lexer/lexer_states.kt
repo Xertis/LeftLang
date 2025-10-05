@@ -70,6 +70,7 @@ fun bindStates(fsm: Fsm): Fsm {
                 }
             }
 
+            lexer.advance()
             return null
     })
 

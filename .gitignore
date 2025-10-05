@@ -36,3 +36,5 @@ build/
 
 ### Mac OS ###
 .DS_Store
+out/artifacts/LeftLang_jar/LeftLang.jar
+.idea/artifacts/LeftLang_jar.xml
