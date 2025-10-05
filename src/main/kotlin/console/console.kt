@@ -7,51 +7,73 @@ import parser.Parser
 import scripts.utils.Logger
 import scripts.utils.LogLevel
 
+data class Command(val name: String, val description: String, val handler: (Array<String>) -> Unit)
+
 class Console {
     val logger = Logger.getLogger("Left")
+    var commands: MutableList<Command> = mutableListOf()
 
     init {
         Logger.setGlobalLevel(LogLevel.DEBUG)
         Logger.setGlobalColors(true)
         Logger.setGlobalTime(true)
         Logger.setGlobalTimeFormat("HH:mm:ss")
+        bind()
     }
 
-    fun translate(args: Array<String>) {
-        val path = args[0]
-        try {
-            val content = File(path).readText(Charsets.UTF_8).trimIndent()
+    private fun bind() {
+        addCommand("help", "Displays information about commands", fun (args: Array<String>) {
+            logger.info("Usage: left [command]")
+            for (command in commands) {
+                logger.info("${command.name} -> ${command.description}", 2)
+            }
+        })
 
-            logger.info("Starting the translate")
-            val lexer = Lexer(source = " $content ")
+        addCommand("translate", "Translates Left in C99", fun (args: Array<String>) {
+            val path = args[0]
+            try {
+                val content = File(path).readText(Charsets.UTF_8).trimIndent()
 
-            logger.info("Translating \"$path\"...")
-            lexer.toTokens()
-            logger.info("The lexer's work is finished...", 4)
+                logger.info("Starting the translate")
+                val lexer = Lexer(source = " $content ")
 
-            val parser = Parser(lexer.tokens)
-            val program = parser.makeAst()
-            logger.info("The parser's work is finished...", 4)
-            val generator = Generator(program)
-            val res = generator.startGen()
-            logger.info("Translating finished. Result:\n$res")
-        } catch (e: Exception) {
-            logger.fatal("Left fatal error: ${e.message}")
-        }
+                logger.info("Translating \"$path\"...")
+                lexer.toTokens()
+                logger.info("The lexer's work is finished...", 2)
+
+                val parser = Parser(lexer.tokens)
+                val program = parser.makeAst()
+                logger.info("The parser's work is finished...", 2)
+                val generator = Generator(program)
+                val res = generator.startGen()
+                logger.info("Translating finished. Result:\n$res", 2)
+            } catch (e: Exception) {
+                logger.fatal("Left fatal error: ${e.message}")
+            }
+        })
     }
+
+    private fun addCommand(name: String, description: String, handler: (Array<String>) -> Unit) {
+        commands += Command(name, description, handler)
+    }
+
     fun process(args: Array<String>) {
         if (args.isEmpty()) {
             logger.error("0 arguments received")
             return
         }
-        println(args.joinToString())
+
         val mainArg = args[0]
         val withoutMain = args.sliceArray(1 until args.size)
 
-        when(mainArg) {
-            "translate" -> translate(withoutMain)
-            else -> throw RuntimeException("Unknown argument: $mainArg")
+        for (command in commands) {
+            if (command.name == mainArg) {
+                command.handler(withoutMain)
+                return
+            }
         }
+
+        throw RuntimeException("Unknown argument: $mainArg")
     }
 
     companion object
