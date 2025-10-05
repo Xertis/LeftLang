@@ -7,7 +7,12 @@ import parser.Parser
 import scripts.utils.Logger
 import scripts.utils.LogLevel
 
-data class Command(val name: String, val description: String, val handler: (Array<String>) -> Unit)
+data class Command(
+    val name: String,
+    val description: String,
+    val handler: (Array<String>) -> Unit,
+    val needArgs: Boolean=false
+)
 
 class Console {
     val logger = Logger.getLogger("Left")
@@ -22,14 +27,14 @@ class Console {
     }
 
     private fun bind() {
-        addCommand("help", "Displays information about commands", fun (args: Array<String>) {
+        addCommand("help", "Displays information about commands", false, fun (args: Array<String>) {
             logger.info("Usage: left [command]")
             for (command in commands) {
                 logger.info("${command.name} -> ${command.description}", 2)
             }
         })
 
-        addCommand("translate", "Translates Left in C99", fun (args: Array<String>) {
+        addCommand("translate", "Translates Left in C99", true, fun (args: Array<String>) {
             val path = args[0]
             try {
                 val content = File(path).readText(Charsets.UTF_8).trimIndent()
@@ -53,8 +58,8 @@ class Console {
         })
     }
 
-    private fun addCommand(name: String, description: String, handler: (Array<String>) -> Unit) {
-        commands += Command(name, description, handler)
+    private fun addCommand(name: String, description: String, needArgs: Boolean, handler: (Array<String>) -> Unit) {
+        commands += Command(name, description, handler, needArgs)
     }
 
     fun process(args: Array<String>) {
@@ -68,7 +73,12 @@ class Console {
 
         for (command in commands) {
             if (command.name == mainArg) {
-                command.handler(withoutMain)
+                if (!command.needArgs or withoutMain.isNotEmpty()) {
+                    command.handler(withoutMain)
+                } else {
+                    logger.error("Expected arguments not passed")
+                }
+
                 return
             }
         }
