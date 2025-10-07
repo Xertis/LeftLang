@@ -97,7 +97,6 @@ class Parser(val tokens: List<Token>) {
 
         val variable = parseVarDecl()
         expect(TokenTypes.KW_IN)
-        println("1и")
 
         val range = parseRange()
         range.name = variable.name
@@ -110,7 +109,6 @@ class Parser(val tokens: List<Token>) {
 
         expect(TokenTypes.RPAREN)
         val body = parseBlock(false)
-        println("ну и")
         return ForDecl(
             init = variable,
             range = range,

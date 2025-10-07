@@ -18,7 +18,7 @@
     <repositories>
         <repository>
             <id>mavenCentral</id>
-            <url>https://repo1.maven.org/maven2/</url>
+            <url>https://repo.maven.org/maven2/</url>
         </repository>
     </repositories>
 
@@ -139,6 +139,11 @@
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
             <version>20231013</version>
+        </dependency>
+        <dependency>
+            <groupId>com.moandjiezana.toml</groupId>
+            <artifactId>toml4j</artifactId>
+            <version>0.7.2</version>
         </dependency>
     </dependencies>
 </project>
