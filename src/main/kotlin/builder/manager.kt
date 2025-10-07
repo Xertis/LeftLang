@@ -95,7 +95,7 @@ object Manager {
         val command = OsCmd.prepareCommand(buildCommand, translations)
 
         logger.info("Executing the command: ${command.joinToString(" ")}", 2)
-        OsCmd.run(command)
+        println(OsCmd.run(command))
     }
 
     fun translateFolder() {
