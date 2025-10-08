@@ -38,12 +38,14 @@ fun bindStates(fsm: Fsm): Fsm {
                 lexer.putToken(TokenTypes.STRING, fun () {
                     lexer.nextIt(arrayOf("\""), true)
                 }, true)
+                return null
             }
 
             if (lexer.isIt("'", true)) {
                 lexer.putToken(TokenTypes.CHAR, fun () {
                     lexer.nextIt(arrayOf("'"), true)
                 }, true)
+                return null
             }
 
             // Определяем теперь то, какое состояние сделать
