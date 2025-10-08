@@ -12,7 +12,8 @@ data class Command(
     val name: String,
     val description: String,
     val handler: (Array<String>) -> Unit,
-    val needArgs: Boolean=false
+    val needArgs: Boolean=false,
+    val args: Array<String>?=null
 )
 
 class Console {
@@ -28,7 +29,7 @@ class Console {
     }
 
     fun addCommand(name: String, description: String, needArgs: Boolean, handler: (Array<String>) -> Unit) {
-        commands += Command(name, description, handler, needArgs)
+        commands += Command(name, description, handler, needArgs, null)
     }
 
     fun process(args: Array<String>) {

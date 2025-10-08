@@ -4,7 +4,6 @@ import generator.Generator
 import lexer.Lexer
 import parser.Parser
 import java.io.File
-import java.nio.file.Files
 import builder.Manager
 
 fun bindCommands(console: Console) {
@@ -47,5 +46,14 @@ fun bindCommands(console: Console) {
     console.addCommand("build", "Building a project", false, fun (args: Array<String>) {
         Manager.translateFolder()
         Manager.build()
+    })
+
+    console.addCommand("run", "Run the project", false, fun (args: Array<String>) {
+        if ("-rebuild" in args) {
+            Manager.translateFolder()
+            Manager.build()
+        }
+
+        Manager.run()
     })
 }

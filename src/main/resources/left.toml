@@ -3,6 +3,11 @@ name = "default"
 main = "main"
 version = "1.0.0"
 
+[run]
+windows-11 = "test"
+linux      = "test"
+macos      = "test"
+
 [build]
 windows-11 = "test"
 linux      = "test"

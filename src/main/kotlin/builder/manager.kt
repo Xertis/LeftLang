@@ -17,6 +17,7 @@ object Manager {
 
     val logger = Logger.getLogger("Left-BuildSystem")
     var leftConfig: com.moandjiezana.toml.Toml? = null
+    val osName = System.getProperty("os.name").lowercase().replace(" ", "-")
 
     init {
         Logger.setGlobalLevel(LogLevel.DEBUG)
@@ -70,8 +71,6 @@ object Manager {
     }
 
     private fun buildProject(buildDir: File, translatedDir: File) {
-        val osName = System.getProperty("os.name").lowercase().replace(" ", "-")
-
         logger.info("reading \"left.toml\"...", 2)
 
         val project = leftConfig!!.getTable("project")
@@ -143,6 +142,51 @@ object Manager {
             buildDir.mkdirs()
 
             buildProject(buildDir, translatedDir)
+        } catch (e: Exception) {
+            logger.fatal("Left fatal error: ${e.message}", 2)
+        }
+    }
+
+    fun run() {
+        try {
+            logger.info("Starting of project")
+            val buildDir = File("target/build")
+            val leftConfigFile = File("left.toml")
+
+            if (!leftConfigFile.exists() && leftConfig != null) {
+                logger.error("File \"left.toml\" not found", 2)
+                return
+            }
+
+            if (!buildDir.exists()) {
+                logger.error("Folder \"build\" not found", 2)
+                return
+            }
+
+            logger.info("reading \"left.toml\"...", 2)
+
+            val run = leftConfig!!.getTable("run")
+            val project = leftConfig!!.getTable("project")
+
+            val runCommand = run.getString(osName)
+            val mainFile = project.getString("main")
+
+            when {
+                mainFile == null -> throw RuntimeException("The main file was not found")
+                runCommand == null -> throw RuntimeException("No run command found for operating system \"$osName\"")
+            }
+
+            val translations = hashMapOf(
+                "MainFile" to mainFile,
+                "Os" to osName,
+                "BuildDir" to buildDir.path
+            )
+
+            val command = OsCmd.prepareCommand(runCommand, translations)
+
+            logger.info("Executing the command: ${command.joinToString(" ")}", 2)
+            println(OsCmd.run(command))
+
         } catch (e: Exception) {
             logger.fatal("Left fatal error: ${e.message}", 2)
         }
