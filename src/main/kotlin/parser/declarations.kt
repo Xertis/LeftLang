@@ -57,6 +57,8 @@ data class VarLink(val ref: VarRef): Expr()
 data class BinaryExpr(val left: Expr, val op: String, val right: Expr) : Expr()
 data class CallExpr(val name: String, val args: List<Expr>) : Expr()
 data class Range(val start: Expr, val end: Expr, var name: String?) : Expr()
+class Break() : Expr()
+class Continue() : Expr()
 
 // --- системное ---
 data class Include(val path: String, val isLeftScript: Boolean, val isStd: Boolean): Expr()

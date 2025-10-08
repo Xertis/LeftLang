@@ -4,8 +4,10 @@ import parser.Arg
 import parser.Assign
 import parser.BinaryExpr
 import parser.Block
+import parser.Break
 import parser.CallExpr
 import parser.ConstDecl
+import parser.Continue
 import parser.Expr
 import parser.ForDecl
 import parser.FunDecl
@@ -241,6 +243,8 @@ class Generator(val program: Program) {
             is WhileDecl -> genWhile(decl, root)
             is ForDecl -> genFor(decl, root)
             is Range -> genRange(decl, root)
+            is Break -> "break;"
+            is Continue -> "continue;"
         }
     }
 
