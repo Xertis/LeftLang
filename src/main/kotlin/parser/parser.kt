@@ -450,10 +450,15 @@ class Parser(val tokens: List<Token>) {
                 } else {
                     expect(TokenTypes.LT)
                     val includeNameToken = expect(TokenTypes.IDENT)!!
-                    expect(TokenTypes.DOT)
-                    val includeExtToken = expect(TokenTypes.IDENT)!!
+                    val path = if (expect(TokenTypes.DOT, true) != null) {
+                        val includeExtToken = expect(TokenTypes.IDENT)
+                            ?: throw RuntimeException("Expected file extension after dot")
+                        "${includeNameToken.value}.${includeExtToken.value}"
+                    } else {
+                        back()
+                        includeNameToken.value
+                    }
                     expect(TokenTypes.GT)
-                    val path = "${includeNameToken.value}.${includeExtToken.value}"
                     return PreProcDecl(data = path, directive = Include(path = path, false, true))
                 }
             }
