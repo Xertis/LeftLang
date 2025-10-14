@@ -9,7 +9,7 @@ enum class TokenTypes {
     KW_WHILE, KW_FOR, KW_BREAK, KW_CONTINUE,
     KW_TRUE, KW_FALSE,
     KW_IN,
-    PLUS, MINUS, MUL, DIV, MOD,
+    PLUS, MINUS, MUL, DIV, MOD, QMARK,
     PLUSEQ, MINUSEQ, MULEQ, DIVEQ, MODEQ, // +=, -=, *=, /= %=
     INC, DEC,
     EQ, EQEQ, BANGEQ, LT, GT, LTE, GTE, //=, ==, !=, <, >, <=, >=

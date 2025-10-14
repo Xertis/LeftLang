@@ -5,7 +5,7 @@ import scripts.utils.TokenBuffer
 import TokenTypes
 import TokenizerStates
 
-const val VALID_OPERATOR_SYMBOLS = "-+/*%=<>&|!"
+const val VALID_OPERATOR_SYMBOLS = "-+/*%=<>&|!?"
 const val VALID_DELIMETER_SYMBOLS = ":;(){}.,"
 
 fun bindStates(fsm: Fsm): Fsm {
@@ -166,6 +166,7 @@ fun bindStates(fsm: Fsm): Fsm {
                 "=" -> lexer.putToken(TokenTypes.EQ, lexer.buffer)
                 "!" -> lexer.putToken(TokenTypes.NOT, lexer.buffer)
                 "&" -> lexer.putToken(TokenTypes.LINK, lexer.buffer)
+                "?" -> lexer.putToken(TokenTypes.QMARK, lexer.buffer)
                 "+=" -> lexer.putToken(TokenTypes.PLUSEQ, lexer.buffer)
                 "-=" -> lexer.putToken(TokenTypes.MINUSEQ, lexer.buffer)
                 "*=" -> lexer.putToken(TokenTypes.MULEQ, lexer.buffer)

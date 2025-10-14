@@ -43,7 +43,7 @@ data class Param(val name: String, val type: String, val defaultValue: Expr?=nul
 data class Arg(val name: String, val value: Expr): Expr()
 
 // --- операторы ---
-data class VarDecl(val mutable: Boolean, val name: String, val type: String, val value: Expr) : Node()
+data class VarDecl(val mutable: Boolean, val name: String, val type: String, val value: Expr?=null, val isNull: Boolean=false) : Node()
 data class Assign(val target: String, val value: Expr) : Node()
 data class VarBinaryExpr(val variable: VarRef, val op: String, val expr: Expr): Node()
 data class Return(val value: Expr) : Node()

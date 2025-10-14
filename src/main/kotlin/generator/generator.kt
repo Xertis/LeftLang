@@ -150,7 +150,9 @@ class Generator(val program: Program) {
             false -> "signed"
             null -> ""
         }
-        return "$sign ${left2Ctype(decl.type)} ${decl.name} = ${gen(decl.value, root)}"
+
+        if (!decl.isNull) return "$sign ${left2Ctype(decl.type)} ${decl.name} = ${gen(decl.value!!, root)}"
+        return "$sign ${left2Ctype(decl.type)} ${decl.name}"
     }
 
     private fun genConst(decl: ConstDecl, root: List<Node>): String {

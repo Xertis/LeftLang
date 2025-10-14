@@ -184,9 +184,14 @@ class Parser(val tokens: List<Token>) {
         val name = expect(TokenTypes.IDENT)!!.value
         expect(TokenTypes.COL)
         val type = expect(TokenGroups.VARTYPE)!!.value
-        expect(TokenTypes.EQ)
-        val value = parseExpr()
-        return VarDecl(mut, name, type, value)
+        if (peek()?.type == TokenTypes.QMARK) {
+            advance()
+            return VarDecl(mut, name, type, isNull = true)
+        } else {
+            expect(TokenTypes.EQ)
+            val value = parseExpr()
+            return VarDecl(mut, name, type, value)
+        }
     }
 
     private fun parseConstDecl(): ConstDecl {
