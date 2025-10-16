@@ -5,7 +5,7 @@ import TokenTypes
 sealed class Node
 
 // --- верхний уровень ---
-data class Program(val decls: List<Node>) : Node()
+data class Program(var decls: List<Node>) : Node()
 data class ConstDecl(val name: String, val type: String, val value: Expr) : Node()
 data class FunDecl(
     val name: String,
@@ -47,7 +47,7 @@ data class VarDecl(val mutable: Boolean, val name: String, val type: String, val
 data class Assign(val target: String, val value: Expr) : Node()
 data class VarBinaryExpr(val variable: VarRef, val op: String, val expr: Expr): Node()
 data class Return(val value: Expr) : Node()
-data class Block(val statements: List<Node>, val ownScopeStack: Boolean=true) : Node()
+data class Block(var statements: List<Node>, val ownScopeStack: Boolean=true) : Node()
 
 // --- выражения ---
 sealed class Expr : Node()

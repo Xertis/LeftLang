@@ -13,6 +13,8 @@ import parser.Parser
 import scripts.utils.Toml
 import scripts.utils.OsCmd
 
+import semantic.Semantic
+
 object Manager {
 
     val logger = Logger.getLogger("Left-BuildSystem")
@@ -36,6 +38,9 @@ object Manager {
 
         val parser = Parser(lexer.tokens)
         val program = parser.makeAst()
+
+        Semantic.analyze(program)
+
         val generator = Generator(program)
 
         return generator.startGen()

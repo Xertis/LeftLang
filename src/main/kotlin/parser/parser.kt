@@ -180,7 +180,11 @@ class Parser(val tokens: List<Token>) {
 
     // Парсинг переменной
     private fun parseVarDecl(): VarDecl {
-        val mut = advance()!!.type == TokenTypes.VAR
+        val mut = when (advance()!!.type) {
+            TokenTypes.VAR -> true
+            TokenTypes.VAL -> false
+            else -> throw RuntimeException("Expected \"val\" or \"var\" but found ${peek()}")
+        }
         val name = expect(TokenTypes.IDENT)!!.value
         expect(TokenTypes.COL)
         val type = expect(TokenGroups.VARTYPE)!!.value

@@ -3,6 +3,7 @@ package console
 import generator.Generator
 import lexer.Lexer
 import parser.Parser
+import semantic.Semantic
 import java.io.File
 import builder.Manager
 
@@ -31,6 +32,8 @@ fun bindCommands(console: Console) {
             val parser = Parser(lexer.tokens)
             val program = parser.makeAst()
             logger.info("The parser's work is finished...", 2)
+            Semantic.analyze(program)
+            logger.info("The semantic's work is finished...", 2)
             val generator = Generator(program)
             val res = generator.startGen()
             logger.info("Translating finished. Result:\n$res", 2)

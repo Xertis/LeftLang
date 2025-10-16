@@ -87,7 +87,7 @@ class Generator(val program: Program) {
     private fun genLogic(decl: LogicDecl, root: List<Node>): String {
         val name = if (decl.type == TokenTypes.KW_IF) "if" else "else if"
 
-        var fullLogicBlock = "$name ${gen(decl.logicExpr, root)} {\n${gen(decl.body, root)}}"
+        var fullLogicBlock = "$name (${gen(decl.logicExpr, root)}) {\n${gen(decl.body, root)}}"
 
         if (decl.middlewares != null) {
             for (ware in decl.middlewares) {
