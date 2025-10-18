@@ -1,5 +1,7 @@
 import console.Console
 
 fun main(args: Array<String>) {
-    Console().process(args)
+    val status = Console().process(args)
+
+    if (!status) throw RuntimeException("Abort")
 }

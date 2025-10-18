@@ -10,17 +10,22 @@ import builder.Manager
 fun bindCommands(console: Console) {
     val logger = console.logger
     val commands = console.commands
-    console.addCommand("help", "Displays information about commands", false, fun (args: Array<String>) {
+    console.addCommand("help", "Displays information about commands", false, fun (args: Array<String>): Boolean? {
         logger.info("Usage: left [command]")
         for (command in commands) {
             logger.info("${command.name} -> ${command.description}", 2)
         }
+
+        return true
     })
 
-    console.addCommand("translate", "Translates Left in C99", true, fun (args: Array<String>) {
+    console.addCommand("translate", "Translates Left in C99", true, fun (args: Array<String>): Boolean? {
         val path = args[0]
         try {
-            val content = File(path).readText(Charsets.UTF_8).trimIndent()
+            val content = when("-itContent" in args) {
+                false -> File(path).readText(Charsets.UTF_8).trimIndent()
+                true -> path
+            }
 
             logger.info("Starting the translate")
             val lexer = Lexer(source = " $content ")
@@ -39,24 +44,32 @@ fun bindCommands(console: Console) {
             logger.info("Translating finished. Result:\n$res", 2)
         } catch (e: Exception) {
             logger.fatal("Left fatal error: ${e.message}")
+            return false
         }
+
+        return true
     })
 
-    console.addCommand("create", "Creates a new project with a basic structure", false, fun (args: Array<String>) {
+    console.addCommand("create", "Creates a new project with a basic structure", false, fun (args: Array<String>): Boolean? {
         Manager.create()
+        return true
     })
 
-    console.addCommand("build", "Building a project", false, fun (args: Array<String>) {
+    console.addCommand("build", "Building a project", false, fun (args: Array<String>): Boolean? {
         Manager.translateFolder()
         Manager.build()
+
+        return true
     })
 
-    console.addCommand("run", "Run the project", false, fun (args: Array<String>) {
+    console.addCommand("run", "Run the project", false, fun (args: Array<String>): Boolean? {
         if ("-rebuild" in args) {
             Manager.translateFolder()
             Manager.build()
         }
 
         Manager.run()
+
+        return true
     })
 }
