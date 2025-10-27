@@ -100,6 +100,16 @@ fun bindStates(fsm: Fsm): Fsm {
                 "i64" -> lexer.putToken(TokenTypes.KW_I64, lexer.buffer)
                 "imax" -> lexer.putToken(TokenTypes.KW_IMAX, lexer.buffer)
 
+                "FastU8" -> lexer.putToken(TokenTypes.KW_U8_FAST, lexer.buffer)
+                "FastU16" -> lexer.putToken(TokenTypes.KW_U16_FAST, lexer.buffer)
+                "FastU32" -> lexer.putToken(TokenTypes.KW_U32_FAST, lexer.buffer)
+                "FastU64" -> lexer.putToken(TokenTypes.KW_U64_FAST, lexer.buffer)
+
+                "FastI8" -> lexer.putToken(TokenTypes.KW_I8_FAST, lexer.buffer)
+                "FastI16" -> lexer.putToken(TokenTypes.KW_I16_FAST, lexer.buffer)
+                "FastI32" -> lexer.putToken(TokenTypes.KW_I32_FAST, lexer.buffer)
+                "FastI64" -> lexer.putToken(TokenTypes.KW_I64_FAST, lexer.buffer)
+
                 "byte" -> lexer.putToken(TokenTypes.KW_BYTE, lexer.buffer)
                 "Byte" -> lexer.putToken(TokenTypes.KW_BYTE_UNSIGNED, lexer.buffer)
                 "short" -> lexer.putToken(TokenTypes.KW_SHORT, lexer.buffer)

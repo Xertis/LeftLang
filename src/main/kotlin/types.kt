@@ -4,6 +4,9 @@ enum class TokenTypes {
     KW_U8, KW_U16, KW_U32, KW_U64, KW_UMAX,
     KW_I8, KW_I16, KW_I32, KW_I64, KW_IMAX,
 
+    KW_U8_FAST, KW_U16_FAST, KW_U32_FAST, KW_U64_FAST,
+    KW_I8_FAST, KW_I16_FAST, KW_I32_FAST, KW_I64_FAST,
+
     KW_F32, KW_F64,
 
     KW_BYTE, KW_SHORT, KW_INT, KW_LONG,  KW_HEAVY,
@@ -37,8 +40,15 @@ val STDINT_VARTYPE_GROUP = arrayOf(
     TokenTypes.KW_U32,
     TokenTypes.KW_U64,
     TokenTypes.KW_UMAX,
+    TokenTypes.KW_I8_FAST,
+    TokenTypes.KW_I16_FAST,
+    TokenTypes.KW_I32_FAST,
+    TokenTypes.KW_I64_FAST,
+    TokenTypes.KW_U8_FAST,
+    TokenTypes.KW_U16_FAST,
+    TokenTypes.KW_U32_FAST,
+    TokenTypes.KW_U64_FAST,
 )
-
 val VALID_VARTYPE_GROUP_TOKEN_TYPES = arrayOf(
     TokenTypes.KW_I8,
     TokenTypes.KW_I16,
@@ -64,7 +74,15 @@ val VALID_VARTYPE_GROUP_TOKEN_TYPES = arrayOf(
     TokenTypes.KW_SHORT_UNSIGNED,
     TokenTypes.KW_INT_UNSIGNED,
     TokenTypes.KW_LONG_UNSIGNED,
-    TokenTypes.KW_HEAVY_UNSIGNED
+    TokenTypes.KW_HEAVY_UNSIGNED,
+    TokenTypes.KW_I8_FAST,
+    TokenTypes.KW_I16_FAST,
+    TokenTypes.KW_I32_FAST,
+    TokenTypes.KW_I64_FAST,
+    TokenTypes.KW_U8_FAST,
+    TokenTypes.KW_U16_FAST,
+    TokenTypes.KW_U32_FAST,
+    TokenTypes.KW_U64_FAST,
 )
 
 val VALID_PREPROC_GROUP_TOKEN_TYPES = arrayOf(

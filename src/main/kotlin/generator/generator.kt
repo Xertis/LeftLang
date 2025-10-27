@@ -64,6 +64,16 @@ class Generator(val program: Program) {
             TokenTypes.KW_I32 -> "int32_t"
             TokenTypes.KW_I64 -> "int64_t"
             TokenTypes.KW_IMAX -> "intmax_t"
+
+            TokenTypes.KW_U8_FAST -> "uint_fast8_t"
+            TokenTypes.KW_U16_FAST -> "uint_fast16_t"
+            TokenTypes.KW_U32_FAST -> "uint_fast32_t"
+            TokenTypes.KW_U64_FAST -> "uint_fast64_t"
+
+            TokenTypes.KW_I8_FAST -> "int_fast8_t"
+            TokenTypes.KW_I16_FAST -> "int_fast16_t"
+            TokenTypes.KW_I32_FAST -> "int_fast32_t"
+            TokenTypes.KW_I64_FAST -> "int_fast64_t"
             else -> throw RuntimeException("Unknown type: $type")
         }
     }
