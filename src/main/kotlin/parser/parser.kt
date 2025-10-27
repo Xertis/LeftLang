@@ -187,7 +187,7 @@ class Parser(val tokens: List<Token>) {
         }
         val name = expect(TokenTypes.IDENT)!!.value
         expect(TokenTypes.COL)
-        val type = expect(TokenGroups.VARTYPE)!!.value
+        val type = expect(TokenGroups.VARTYPE)!!.type
         if (peek()?.type == TokenTypes.QMARK) {
             advance()
             return VarDecl(mut, name, type, isNull = true)
@@ -202,7 +202,7 @@ class Parser(val tokens: List<Token>) {
         expect(TokenTypes.CONST)
         val name = expect(TokenTypes.IDENT)!!.value
         expect(TokenTypes.COL)
-        val type = expect(TokenGroups.VARTYPE)!!.value
+        val type = expect(TokenGroups.VARTYPE)!!.type
         expect(TokenTypes.EQ)
         val value = parseExpr()
         return ConstDecl(name, type, value)
@@ -217,7 +217,7 @@ class Parser(val tokens: List<Token>) {
         while (peek()?.type != TokenTypes.RPAREN) {
             val pname = expect(TokenTypes.IDENT)!!.value
             expect(TokenTypes.COL)
-            val ptype = expect(TokenGroups.VARTYPE)!!.value
+            val ptype = expect(TokenGroups.VARTYPE)!!.type
             var defaultValue: Literal? = null
 
             if (peek()?.type == TokenTypes.EQ) {
@@ -238,9 +238,9 @@ class Parser(val tokens: List<Token>) {
         }
 
         expect(TokenTypes.RPAREN)
-        var returnType: String = "Void"
+        var returnType = TokenTypes.KW_VOID
         if (expect(TokenTypes.ARROW, soft = true) != null) {
-            returnType = expect(TokenGroups.VARTYPE)!!.value
+            returnType = expect(TokenGroups.VARTYPE)!!.type
         } else {
             back()
         }

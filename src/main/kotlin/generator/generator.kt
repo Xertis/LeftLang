@@ -1,5 +1,6 @@
 package generator
 
+import TokenTypes
 import parser.Arg
 import parser.Assign
 import parser.BinaryExpr
@@ -28,35 +29,41 @@ import parser.WhileDecl
 import tokens.Token
 
 class Generator(val program: Program) {
-    private fun isUnsigned(type: String): Boolean? {
+    private fun isUnsigned(type: TokenTypes): Boolean? {
         return when (type) {
-            "Byte", "Short", "Int", "Long", "Heavy" -> true
-            "byte", "short", "int", "long", "heavy" -> false
+            TokenTypes.KW_BYTE_UNSIGNED, TokenTypes.KW_SHORT_UNSIGNED, TokenTypes.KW_INT_UNSIGNED,
+            TokenTypes.KW_LONG_UNSIGNED, TokenTypes.KW_HEAVY_UNSIGNED -> true
+
+            TokenTypes.KW_BYTE, TokenTypes.KW_SHORT, TokenTypes.KW_INT,
+            TokenTypes.KW_LONG, TokenTypes.KW_HEAVY -> false
+
             else -> null
         }
     }
 
-    private fun left2Ctype(type: String): String {
+    private fun left2Ctype(type: TokenTypes): String {
         return when(type) {
-            "Byte", "byte" -> "char"
-            "Short", "short" -> "short"
-            "Int", "int" -> "int"
-            "Long", "long" -> "long"
-            "Heavy", "heavy" -> "long long"
-            "f32" -> "float"
-            "f64" -> "double"
-            "Bool" -> "_Bool"
-            "Void" -> "void"
+            TokenTypes.KW_BYTE, TokenTypes.KW_BYTE_UNSIGNED -> "char"
+            TokenTypes.KW_SHORT, TokenTypes.KW_SHORT_UNSIGNED -> "short"
+            TokenTypes.KW_INT, TokenTypes.KW_INT_UNSIGNED -> "int"
+            TokenTypes.KW_LONG, TokenTypes.KW_LONG_UNSIGNED -> "long"
+            TokenTypes.KW_HEAVY, TokenTypes.KW_HEAVY_UNSIGNED -> "long long"
+            TokenTypes.KW_F32 -> "float"
+            TokenTypes.KW_F64 -> "double"
+            TokenTypes.KW_BOOL -> "_Bool"
+            TokenTypes.KW_VOID -> "void"
 
-            "u8" -> "uint8_t"
-            "u16" -> "uint16_t"
-            "u32" -> "uint32_t"
-            "u64" -> "uint64_t"
+            TokenTypes.KW_U8 -> "uint8_t"
+            TokenTypes.KW_U16 -> "uint16_t"
+            TokenTypes.KW_U32 -> "uint32_t"
+            TokenTypes.KW_U64 -> "uint64_t"
+            TokenTypes.KW_UMAX -> "uintmax_t"
 
-            "i8" -> "int8_t"
-            "i16" -> "int16_t"
-            "i32" -> "int32_t"
-            "i64" -> "int64_t"
+            TokenTypes.KW_I8 -> "int8_t"
+            TokenTypes.KW_I16 -> "int16_t"
+            TokenTypes.KW_I32 -> "int32_t"
+            TokenTypes.KW_I64 -> "int64_t"
+            TokenTypes.KW_IMAX -> "intmax_t"
             else -> throw RuntimeException("Unknown type: $type")
         }
     }

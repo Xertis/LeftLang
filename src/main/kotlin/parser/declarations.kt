@@ -6,10 +6,10 @@ sealed class Node
 
 // --- верхний уровень ---
 data class Program(var decls: List<Node>) : Node()
-data class ConstDecl(val name: String, val type: String, val value: Expr) : Node()
+data class ConstDecl(val name: String, val type: TokenTypes, val value: Expr) : Node()
 data class FunDecl(
     val name: String,
-    val returnType: String,
+    val returnType: TokenTypes,
     val params: List<Param>,
     val body: Block
 ) : Node()
@@ -39,11 +39,11 @@ data class ForDecl(
     val body: Block
 ) : Node()
 
-data class Param(val name: String, val type: String, val defaultValue: Expr?=null)
+data class Param(val name: String, val type: TokenTypes, val defaultValue: Expr?=null)
 data class Arg(val name: String, val value: Expr): Expr()
 
 // --- операторы ---
-data class VarDecl(val mutable: Boolean, val name: String, val type: String, val value: Expr?=null, val isNull: Boolean=false) : Node()
+data class VarDecl(val mutable: Boolean, val name: String, val type: TokenTypes, val value: Expr?=null, val isNull: Boolean=false) : Node()
 data class Assign(val target: String, val value: Expr) : Node()
 data class VarBinaryExpr(val variable: VarRef, val op: String, val expr: Expr): Node()
 data class Return(val value: Expr) : Node()

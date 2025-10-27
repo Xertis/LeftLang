@@ -1,5 +1,6 @@
 package semantic
 
+import STDINT_VARTYPE_GROUP
 import parser.Arg
 import parser.Assign
 import parser.BinaryExpr
@@ -188,11 +189,8 @@ fun bindMiddleWares(semantic: Semantic) {
     }
 
     semantic.addMiddleware { decl, nodes, semantic ->
-        if (decl is VarDecl) {
-            when (decl.type) {
-                "u8", "u16", "u32", "u64",
-                "i8", "i16", "i32", "i64" -> semantic.setFlag("exact-width-variable", 1)
-            }
+        if (decl is VarDecl && decl.type in STDINT_VARTYPE_GROUP) {
+            semantic.setFlag("exact-width-variable", 1)
         } else if (decl is PreProcDecl && decl.directive is Include && decl.directive.path == "stdint.h") {
             semantic.setFlag("has-stdint-include", 1)
         }

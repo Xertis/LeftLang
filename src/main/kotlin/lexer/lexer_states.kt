@@ -92,13 +92,13 @@ fun bindStates(fsm: Fsm): Fsm {
                 "u16" -> lexer.putToken(TokenTypes.KW_U16, lexer.buffer)
                 "u32" -> lexer.putToken(TokenTypes.KW_U32, lexer.buffer)
                 "u64" -> lexer.putToken(TokenTypes.KW_U64, lexer.buffer)
-                "usize" -> lexer.putToken(TokenTypes.KW_USIZE, lexer.buffer)
+                "umax" -> lexer.putToken(TokenTypes.KW_UMAX, lexer.buffer)
 
                 "i8" -> lexer.putToken(TokenTypes.KW_I8, lexer.buffer)
                 "i16" -> lexer.putToken(TokenTypes.KW_I16, lexer.buffer)
                 "i32" -> lexer.putToken(TokenTypes.KW_I32, lexer.buffer)
                 "i64" -> lexer.putToken(TokenTypes.KW_I64, lexer.buffer)
-                "isize" -> lexer.putToken(TokenTypes.KW_ISIZE, lexer.buffer)
+                "imax" -> lexer.putToken(TokenTypes.KW_IMAX, lexer.buffer)
 
                 "byte" -> lexer.putToken(TokenTypes.KW_BYTE, lexer.buffer)
                 "Byte" -> lexer.putToken(TokenTypes.KW_BYTE_UNSIGNED, lexer.buffer)
