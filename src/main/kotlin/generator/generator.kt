@@ -26,15 +26,14 @@ import parser.VarLink
 import parser.VarRef
 import parser.WhenDecl
 import parser.WhileDecl
-import tokens.Token
 
 class Generator(val program: Program) {
     private fun isUnsigned(type: TokenTypes): Boolean? {
         return when (type) {
-            TokenTypes.KW_BYTE_UNSIGNED, TokenTypes.KW_SHORT_UNSIGNED, TokenTypes.KW_INT_UNSIGNED,
+            TokenTypes.KW_CHAR_UNSIGNED, TokenTypes.KW_SHORT_UNSIGNED, TokenTypes.KW_INT_UNSIGNED,
             TokenTypes.KW_LONG_UNSIGNED, TokenTypes.KW_HEAVY_UNSIGNED -> true
 
-            TokenTypes.KW_BYTE, TokenTypes.KW_SHORT, TokenTypes.KW_INT,
+            TokenTypes.KW_CHAR, TokenTypes.KW_SHORT, TokenTypes.KW_INT,
             TokenTypes.KW_LONG, TokenTypes.KW_HEAVY -> false
 
             else -> null
@@ -43,7 +42,7 @@ class Generator(val program: Program) {
 
     private fun left2Ctype(type: TokenTypes): String {
         return when(type) {
-            TokenTypes.KW_BYTE, TokenTypes.KW_BYTE_UNSIGNED -> "char"
+            TokenTypes.KW_CHAR, TokenTypes.KW_CHAR_UNSIGNED -> "char"
             TokenTypes.KW_SHORT, TokenTypes.KW_SHORT_UNSIGNED -> "short"
             TokenTypes.KW_INT, TokenTypes.KW_INT_UNSIGNED -> "int"
             TokenTypes.KW_LONG, TokenTypes.KW_LONG_UNSIGNED -> "long"
