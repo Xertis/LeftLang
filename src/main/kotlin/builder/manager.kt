@@ -37,9 +37,7 @@ object Manager {
         lexer.toTokens()
 
         val parser = Parser(lexer.tokens)
-        val program = parser.makeAst()
-
-        Semantic.analyze(program)
+        val program = Semantic.analyze(parser.makeAst())
 
         val generator = Generator(program)
 

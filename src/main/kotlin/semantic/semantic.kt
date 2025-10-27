@@ -27,13 +27,13 @@ import parser.WhileDecl
 import tokens.Token
 import javax.naming.Context
 
-data class MiddleWare(val func: (Node, MutableList<Node>) -> Unit) {
+data class MiddleWare(val func: (Node, MutableList<Node>, Semantic) -> Unit) {
     val nodes = mutableListOf<Node>()
     val backups = mutableListOf(nodes)
     var level = 0
 
-    fun run(decl: Node) {
-        func(decl, nodes)
+    fun run(decl: Node, semantic: Semantic) {
+        func(decl, nodes, semantic)
     }
 
     fun clear() {
@@ -61,18 +61,28 @@ data class MiddleWare(val func: (Node, MutableList<Node>) -> Unit) {
 
 object Semantic {
     var middlewares = mutableListOf<MiddleWare>()
+    var endHandlers = mutableListOf<(HashMap<String, Int>, MutableList<Node>, Semantic) -> MutableList<Node>>()
+    var flags: HashMap<String, Int> = hashMapOf()
 
     init {
         bindMiddleWares(this)
     }
 
-    fun addMiddleware(middleware: (Node, MutableList<Node>) -> Unit) {
+    fun addMiddleware(middleware: (Node, MutableList<Node>, Semantic) -> Unit) {
         middlewares += MiddleWare(middleware)
+    }
+
+    fun addEndHandler(handler: (HashMap<String, Int>, MutableList<Node>, Semantic) -> MutableList<Node>) {
+        endHandlers += handler
+    }
+
+    fun setFlag(key: String, value: Int) {
+        flags[key] = value
     }
 
     private fun runMiddlewares(decl: Node) {
         for (ware in middlewares) {
-            ware.run(decl)
+            ware.run(decl, this)
         }
     }
 
@@ -131,14 +141,24 @@ object Semantic {
         }
     }
 
-    fun analyze(program: Program) {
+    fun analyze(program: Program): Program {
         clearMiddlewares()
         process(program.decls)
+
+        var mutableDeclList = program.decls.toMutableList()
+
+        for (handler in endHandlers) {
+            mutableDeclList = handler(flags, mutableDeclList, this)
+        }
+
+        program.decls = mutableDeclList.toList()
+
+        return program
     }
 }
 
 fun bindMiddleWares(semantic: Semantic) {
-    semantic.addMiddleware { decl, nodes ->
+    semantic.addMiddleware { decl, nodes, semantic ->
         when {
             decl is VarDecl && !decl.mutable -> {
                 nodes += decl
@@ -165,5 +185,31 @@ fun bindMiddleWares(semantic: Semantic) {
                 }
             }
         }
+    }
+
+    semantic.addMiddleware { decl, nodes, semantic ->
+        if (decl is VarDecl) {
+            when (decl.type) {
+                "u8", "u16", "u32", "u64",
+                "i8", "i16", "i32", "i64" -> semantic.setFlag("exact-width-variable", 1)
+            }
+        } else if (decl is PreProcDecl && decl.directive is Include && decl.directive.path == "stdint.h") {
+            semantic.setFlag("has-stdint-include", 1)
+        }
+    }
+
+    semantic.addEndHandler { flags, nodes, semantic ->
+        if (flags["exact-width-variable"] == 1 && flags["has-stdint-include"] == null) {
+            nodes.add(0, PreProcDecl(
+                data = "stdint.h",
+                directive = Include(
+                    isStd = true,
+                    isLeftScript = false,
+                    path = "stdint.h"
+                )
+            ))
+        }
+
+        return@addEndHandler nodes
     }
 }

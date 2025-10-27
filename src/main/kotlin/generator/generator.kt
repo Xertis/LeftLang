@@ -30,23 +30,33 @@ import tokens.Token
 class Generator(val program: Program) {
     private fun isUnsigned(type: String): Boolean? {
         return when (type) {
-            "u8", "u16", "u32", "u64", "usize" -> true
-            "i8", "i16", "i32", "i64", "isize" -> false
+            "Byte", "Short", "Int", "Long", "Heavy" -> true
+            "byte", "short", "int", "long", "heavy" -> false
             else -> null
         }
     }
 
     private fun left2Ctype(type: String): String {
         return when(type) {
-            "u8", "i8" -> "char"
-            "u16", "i16" -> "short"
-            "u32", "i32" -> "int"
-            "u64", "i64" -> "long"
-            "usize", "isize" -> "long long"
+            "Byte", "byte" -> "char"
+            "Short", "short" -> "short"
+            "Int", "int" -> "int"
+            "Long", "long" -> "long"
+            "Heavy", "heavy" -> "long long"
             "f32" -> "float"
             "f64" -> "double"
             "Bool" -> "_Bool"
             "Void" -> "void"
+
+            "u8" -> "uint8_t"
+            "u16" -> "uint16_t"
+            "u32" -> "uint32_t"
+            "u64" -> "uint64_t"
+
+            "i8" -> "int8_t"
+            "i16" -> "int16_t"
+            "i32" -> "int32_t"
+            "i64" -> "int64_t"
             else -> throw RuntimeException("Unknown type: $type")
         }
     }

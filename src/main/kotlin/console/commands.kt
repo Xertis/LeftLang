@@ -35,9 +35,9 @@ fun bindCommands(console: Console) {
             logger.info("The lexer's work is finished...", 2)
 
             val parser = Parser(lexer.tokens)
-            val program = parser.makeAst()
+            var program = parser.makeAst()
             logger.info("The parser's work is finished...", 2)
-            Semantic.analyze(program)
+            program = Semantic.analyze(program)
             logger.info("The semantic's work is finished...", 2)
             val generator = Generator(program)
             val res = generator.startGen()
