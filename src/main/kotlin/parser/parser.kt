@@ -14,7 +14,7 @@ class Parser(val tokens: List<Token>) {
     fun back(): Token? = tokens.getOrNull(pos--)
     fun isLogicExpr(expr: BinaryExpr): Boolean {
         return when (expr.op) {
-            "+", "-", "*", "/" -> false
+            "+", "-", "*", "/", "+=", "-=", "*=", "/=", "%=" -> false
             else -> true
         }
     }
@@ -138,53 +138,82 @@ class Parser(val tokens: List<Token>) {
         )
     }
 
-
     private fun parseWhen(): WhenDecl {
-        val middlewares = mutableListOf<LogicDecl>()
-        var elseBlock: Block? = null
         expect(TokenTypes.KW_WHEN)
 
-        expect(TokenTypes.LPAREN)
-        val variable = parseExpr()
-        expect(TokenTypes.RPAREN)
+        val variable: Expr? = expect(TokenTypes.LPAREN, soft = true)?.let {
+            val expr = parseExpr()
+            expect(TokenTypes.RPAREN)
+            expr
+        } ?: run {
+            back()
+            null
+        }
 
         expect(TokenTypes.LBRACE)
+
+        val branches = mutableListOf<LogicDecl>()
+        var elseBlock: Block? = null
         var isFirst = true
+
         while (peek()?.type != TokenTypes.RBRACE && !isEOF()) {
-            val currentToken = peek()
-            val isElseBlock = currentToken?.type == TokenTypes.KW_ELSE
-            var expr: Expr? = null
-            if (!isElseBlock) {
-                expr = parseExpr()
-                if (expr !is BinaryExpr || !isLogicExpr(expr)) {
-                    expr = BinaryExpr(variable, "==", expr)
-                }
+            val isElse = peek()?.type == TokenTypes.KW_ELSE
+            val conditions = mutableListOf<Expr>()
+
+            if (!isElse) {
+                do {
+                    val cond = parseExpr()
+
+                    conditions += if (variable != null) {
+                        if (cond is Literal) BinaryExpr(variable, "==", cond)
+                        else cond
+                    } else {
+                        cond
+                    }
+                } while (peek()?.type == TokenTypes.COMMA && advance() != null)
             } else {
                 advance()
             }
+
             expect(TokenTypes.ARROW)
 
-            var body: Block? = null
-            if (peek()?.type == TokenTypes.LBRACE) {
-                body = parseBlock(false)
-            } else if (variable is VarRef) {
-                body = Block(listOf(Assign(variable.name, parseExpr())), false)
-            } else {
-                throw RuntimeException("Невозможно присвоить значение НЕ переменной")
+            val body = when {
+                peek()?.type == TokenTypes.LBRACE -> {
+                    parseBlock(false)
+                }
+
+                variable is VarRef -> {
+                    Block(listOf(Assign(variable.name, parseExpr())), false)
+                }
+
+                variable == null -> {
+                    Block(listOf(parseExpr()), false)
+                }
+
+                else -> {
+                    throw RuntimeException("Ожидался блок { ... } или присваивание после ->")
+                }
             }
 
-            if (!isElseBlock) {
-                middlewares += LogicDecl(if (isFirst) TokenTypes.KW_IF else TokenTypes.KW_ELIF, expr!!, body)
+            if (!isElse) {
+                val merged = conditions.reduceOrNull { a, b -> BinaryExpr(a, "||", b) }
+                    ?: throw RuntimeException("Пустое условие в when")
+
+                branches += LogicDecl(
+                    if (isFirst) TokenTypes.KW_IF else TokenTypes.KW_ELIF,
+                    merged,
+                    body
+                )
             } else {
                 elseBlock = body
                 break
             }
+
             isFirst = false
         }
 
         expect(TokenTypes.RBRACE)
-
-        return WhenDecl(middlewares, elseBlock)
+        return WhenDecl(branches, elseBlock)
     }
 
     // Парсинг переменной
