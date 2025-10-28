@@ -1,32 +1,19 @@
 package semantic
 
 import STDINT_VARTYPE_GROUP
-import parser.Arg
 import parser.Assign
-import parser.BinaryExpr
 import parser.Block
-import parser.Break
-import parser.CallExpr
-import parser.ConstDecl
-import parser.Continue
 import parser.ForDecl
 import parser.FunDecl
 import parser.Include
-import parser.Literal
 import parser.LogicDecl
 import parser.Node
 import parser.PreProcDecl
 import parser.Program
-import parser.Range
-import parser.Return
 import parser.VarBinaryExpr
 import parser.VarDecl
-import parser.VarLink
-import parser.VarRef
 import parser.WhenDecl
 import parser.WhileDecl
-import tokens.Token
-import javax.naming.Context
 
 data class MiddleWare(val func: (Node, MutableList<Node>, Semantic) -> Unit) {
     val nodes = mutableListOf<Node>()

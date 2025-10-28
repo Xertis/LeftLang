@@ -32,6 +32,11 @@ data class WhileDecl(
     val body: Block
 ) : Node()
 
+data class RepeatUntilDecl(
+    val expr: Expr,
+    val body: Block
+) : Node()
+
 data class ForDecl(
     val init: VarDecl,
     val range: Expr,

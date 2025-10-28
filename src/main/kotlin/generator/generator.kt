@@ -19,6 +19,7 @@ import parser.Node
 import parser.PreProcDecl
 import parser.Program
 import parser.Range
+import parser.RepeatUntilDecl
 import parser.Return
 import parser.VarBinaryExpr
 import parser.VarDecl
@@ -148,6 +149,14 @@ class Generator(val program: Program) {
         return "while $logic {\n$body}\n"
     }
 
+    private fun genRepeatUntil(decl: RepeatUntilDecl, root: List<Node>): String {
+        var logic = gen(decl.expr, root)
+        if (logic.first() != '(') logic = "($logic)"
+
+        val body = gen(decl.body, root)
+        return "do {\n$body} while $logic; \n"
+    }
+
     private fun genFor(decl: ForDecl, root: List<Node>): String {
         val init = gen(decl.init, root)
         val range = gen(decl.range, root)
@@ -273,6 +282,7 @@ class Generator(val program: Program) {
             is Range -> genRange(decl, root)
             is Break -> "break;"
             is Continue -> "continue;"
+            is RepeatUntilDecl -> genRepeatUntil(decl, root)
         }
     }
 

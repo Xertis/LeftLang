@@ -38,6 +38,7 @@ class Parser(val tokens: List<Token>) {
             TokenTypes.PP_INCLUDE -> parsePreProc()
             TokenTypes.KW_WHEN -> parseWhen()
             TokenTypes.KW_WHILE -> parseWhile()
+            TokenTypes.KW_REPEAT -> parseRepeatUntil()
             TokenTypes.KW_FOR -> parseFor()
             TokenTypes.KW_BREAK -> parseBreak()
             TokenTypes.KW_CONTINUE -> parseContinue()
@@ -84,6 +85,14 @@ class Parser(val tokens: List<Token>) {
         val logic = parseExpr()
         val body = parseBlock(false)
         return WhileDecl(logic, body)
+    }
+
+    private fun parseRepeatUntil(): RepeatUntilDecl {
+        expect(TokenTypes.KW_REPEAT)
+        val body = parseBlock(false)
+        expect(TokenTypes.KW_UNTIL)
+        val logic = parseExpr()
+        return RepeatUntilDecl(logic, body)
     }
 
     private fun parseBreak(): Break {
