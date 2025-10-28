@@ -3,6 +3,7 @@ package semantic
 import STDINT_VARTYPE_GROUP
 import parser.Assign
 import parser.Block
+import parser.CallExpr
 import parser.ForDecl
 import parser.FunDecl
 import parser.Include
@@ -10,8 +11,10 @@ import parser.LogicDecl
 import parser.Node
 import parser.PreProcDecl
 import parser.Program
+import parser.RepeatUntilDecl
 import parser.VarBinaryExpr
 import parser.VarDecl
+import parser.VarLink
 import parser.WhenDecl
 import parser.WhileDecl
 
@@ -129,6 +132,11 @@ object Semantic {
                     process(decl.body.statements)
                     backUpMiddlewares()
                 }
+                is RepeatUntilDecl -> {
+                    saveMiddlewares()
+                    process(decl.body.statements)
+                    backUpMiddlewares()
+                }
                 is ForDecl -> {
                     saveMiddlewares()
                     process(listOf(decl.init))
@@ -140,6 +148,9 @@ object Semantic {
                     process(decl.middlewares)
                     if (decl.elseWare != null) process(decl.elseWare.statements)
                     backUpMiddlewares()
+                }
+                is CallExpr -> {
+                    process(decl.args)
                 }
                 else -> {}
             }
@@ -173,6 +184,15 @@ fun bindMiddleWares(semantic: Semantic) {
                     if (node !is VarDecl) continue
                     if (node.name == decl.target) {
                         throw RuntimeException("a unmutable variable cannot change its value")
+                    }
+                }
+            }
+
+            decl is VarLink -> {
+                for (node in nodes) {
+                    if (node !is VarDecl) continue
+                    if (node.name == decl.ref.name) {
+                        throw RuntimeException("you cannot get the address of a unmutable variable")
                     }
                 }
             }
