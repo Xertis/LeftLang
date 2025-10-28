@@ -137,6 +137,23 @@ object Semantic {
                         backUpMiddlewares()
                     }
                 }
+                is WhileDecl -> {
+                    saveMiddlewares()
+                    process(decl.body.statements)
+                    backUpMiddlewares()
+                }
+                is ForDecl -> {
+                    saveMiddlewares()
+                    process(listOf(decl.init))
+                    process(decl.body.statements)
+                    backUpMiddlewares()
+                }
+                is WhenDecl -> {
+                    saveMiddlewares()
+                    process(decl.middlewares)
+                    if (decl.elseWare != null) process(decl.elseWare.statements)
+                    backUpMiddlewares()
+                }
                 else -> {}
             }
         }
