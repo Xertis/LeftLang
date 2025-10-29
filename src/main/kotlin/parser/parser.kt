@@ -3,13 +3,28 @@ package parser
 import tokens.Token
 import TokenTypes
 import TokenGroups
-import kotlin.math.exp
 
 class Parser(val tokens: List<Token>) {
     var pos: Int = 0
 
-    fun peek(_pos: Int=pos, offset: Int=0): Token? = tokens.getOrNull(_pos+offset)
-    fun advance(): Token? = tokens.getOrNull(pos++)
+    fun peek(_pos: Int = pos, offset: Int = 0, skipNewLine: Boolean = false): Token? {
+        val targetPos = _pos + offset
+        val token = tokens.getOrNull(targetPos)
+
+        if (token?.type == TokenTypes.NEW_LINE && skipNewLine) {
+            return peek(_pos = targetPos + 1, skipNewLine = true)
+        }
+
+        return token
+    }
+    fun advance(skipNewLine: Boolean=true): Token? {
+        val token = tokens.getOrNull(pos++)
+
+        if (skipNewLine && token?.type == TokenTypes.NEW_LINE) {
+            return advance()
+        }
+        return token
+    }
     fun isEOF(): Boolean = pos >= tokens.size
     fun back(): Token? = tokens.getOrNull(pos--)
     fun isLogicExpr(expr: BinaryExpr): Boolean {
@@ -23,12 +38,12 @@ class Parser(val tokens: List<Token>) {
         val decls = mutableListOf<Node>()
         while (!isEOF()) {
             val node = parseStatement()
-            decls.add(node)
+            if (node != null) decls.add(node)
         }
         return Program(decls)
     }
 
-    fun parseStatement(): Node {
+    fun parseStatement(): Node? {
         return when (peek()?.type) {
             TokenTypes.VAL, TokenTypes.VAR -> parseVarDecl()
             TokenTypes.CONST -> parseConstDecl()
@@ -42,6 +57,10 @@ class Parser(val tokens: List<Token>) {
             TokenTypes.KW_FOR -> parseFor()
             TokenTypes.KW_BREAK -> parseBreak()
             TokenTypes.KW_CONTINUE -> parseContinue()
+            TokenTypes.NEW_LINE -> {
+                advance(false)
+                return null
+            }
             TokenTypes.IDENT -> {
                 when (peek(offset = 1)?.type) {
                     TokenTypes.EQ -> parseAssign()
@@ -53,7 +72,7 @@ class Parser(val tokens: List<Token>) {
                     else -> parseCall()
                 }
             }
-            else -> throw RuntimeException("Неожиданный токен: ${peek()}")
+            else -> throw RuntimeException("Unexpected token: ${peek()}")
         }
     }
 
@@ -156,7 +175,7 @@ class Parser(val tokens: List<Token>) {
         var elseBlock: Block? = null
         var isFirst = true
 
-        while (peek()?.type != TokenTypes.RBRACE && !isEOF()) {
+        while (peek(skipNewLine = true)?.type != TokenTypes.RBRACE && !isEOF()) {
             val isElse = peek()?.type == TokenTypes.KW_ELSE
             val conditions = mutableListOf<Expr>()
 
@@ -191,13 +210,13 @@ class Parser(val tokens: List<Token>) {
                 }
 
                 else -> {
-                    throw RuntimeException("Ожидался блок { ... } или присваивание после ->")
+                    throw RuntimeException("Expected a block { ... } or an assignment after ->")
                 }
             }
 
             if (!isElse) {
                 val merged = conditions.reduceOrNull { a, b -> BinaryExpr(a, "||", b) }
-                    ?: throw RuntimeException("Пустое условие в when")
+                    ?: throw RuntimeException("An empty condition in when")
 
                 branches += LogicDecl(
                     if (isFirst) TokenTypes.KW_IF else TokenTypes.KW_ELIF,
@@ -263,7 +282,7 @@ class Parser(val tokens: List<Token>) {
                 val expr = parseExpr()
 
                 if (expr !is Literal) {
-                    throw RuntimeException("Единственное допустимое значение дефолтного значения аргумента функции - Литерал")
+                    throw RuntimeException("The only valid value for the default argument value of a function is Literal")
                 }
 
                 defaultValue = expr
@@ -288,12 +307,20 @@ class Parser(val tokens: List<Token>) {
     }
 
     private fun parseBlock(ownScopeStack: Boolean=true): Block {
-        expect(TokenTypes.LBRACE)
-        val stmts = mutableListOf<Node>()
-        while (peek()?.type != TokenTypes.RBRACE && !isEOF()) {
-            stmts.add(parseStatement())
+        val endTokenTypes = when(peek()?.type) {
+            TokenTypes.LBRACE ->{
+                advance()
+                listOf(TokenTypes.RBRACE)
+            }
+            else -> listOf(TokenTypes.NEW_LINE, TokenTypes.SEMI)
         }
-        expect(TokenTypes.RBRACE)
+
+        val stmts = mutableListOf<Node>()
+        while (peek()?.type !in endTokenTypes && !isEOF()) {
+            val node = parseStatement()
+            if (node != null) stmts.add(node)
+        }
+        if (!isEOF()) expect(endTokenTypes)
         return Block(stmts, ownScopeStack)
     }
 
@@ -315,7 +342,7 @@ class Parser(val tokens: List<Token>) {
             TokenTypes.MULEQ -> VarBinaryExpr(VarRef(name),"*=", expr)
             TokenTypes.DIVEQ -> VarBinaryExpr(VarRef(name),"/=", expr)
             TokenTypes.MODEQ -> VarBinaryExpr(VarRef(name),"%=", expr)
-            else -> throw RuntimeException("Ожидался оператор присваивания, а встретился ${opToken.type}")
+            else -> throw RuntimeException("An assignment operator was expected, but ${opToken.type} was encountered")
         }
     }
 
@@ -457,23 +484,34 @@ class Parser(val tokens: List<Token>) {
                 expect(TokenTypes.RPAREN)
                 expr
             }
-            else -> throw RuntimeException("Неожиданный токен в выражении: $token")
+            else -> throw RuntimeException("Unexpected token in expression: $token")
         }
     }
 
     private fun expect(type: TokenTypes, soft: Boolean = false): Token? {
-        val token = advance() ?: throw RuntimeException("Ожидался $type, но конец токенов")
+        val skipNewLine = type != TokenTypes.NEW_LINE
+        val token = advance(skipNewLine) ?: throw RuntimeException("Expected $type, but end of tokens")
         if (token.type != type) {
-            if (!soft) throw RuntimeException("Ожидался $type, а встретилось ${token.type}")
+            if (!soft) throw RuntimeException("Expected $type, but encountered ${token.type}")
             else return null
         }
         return token
     }
 
     private fun expect(group: TokenGroups, soft: Boolean = false): Token? {
-        val token = advance() ?: throw RuntimeException("Ожидалась группа $group, но конец токенов")
+        val token = advance() ?: throw RuntimeException("Expected group $group, but end of tokens")
         if (token.group != group) {
-            if (!soft) throw RuntimeException("Ожидалась группа $group, а встретилась ${token.type}")
+            if (!soft) throw RuntimeException("Expected group $group, but encountered ${token.type}")
+            else return null
+        }
+        return token
+    }
+
+    private fun expect(typesArray: List<TokenTypes>, soft: Boolean = false): Token? {
+        val skipNewLine = TokenTypes.NEW_LINE !in typesArray
+        val token = advance(skipNewLine) ?: throw RuntimeException("Expected $typesArray, but end of tokens")
+        if (token.type !in typesArray) {
+            if (!soft) throw RuntimeException("Expected $typesArray, but encountered ${token.type}")
             else return null
         }
         return token
@@ -509,7 +547,7 @@ class Parser(val tokens: List<Token>) {
                     return PreProcDecl(data = path, directive = Include(path = path, false, true))
                 }
             }
-            else -> throw RuntimeException("Принят необрабатываемый тип токена")
+            else -> throw RuntimeException("Unprocessed token type accepted")
         }
     }
 }

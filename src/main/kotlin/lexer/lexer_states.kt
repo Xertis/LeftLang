@@ -22,8 +22,8 @@ fun bindStates(fsm: Fsm): Fsm {
                 }
 
                 '\n' -> {
-                    // lexer.putToken(TokenTypes.NEW_LINE, lexer::advance)
-                    lexer.advance(); return null
+                    lexer.putToken(TokenTypes.NEW_LINE, lexer::advance)
+                    return null
                 }
             }
 
