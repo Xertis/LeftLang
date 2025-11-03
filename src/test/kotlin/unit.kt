@@ -44,6 +44,7 @@ class LeftTests {
 
     @Test
     fun valAndVar() {
+        println("run test valAndVar")
         val status1 = runCode("""
             fun main() {
                 val x: Heavy = ?
@@ -66,6 +67,7 @@ class LeftTests {
 
     @Test
     fun whenTest() {
+        println("run test whenTest")
         var res = ""
         for (i in 1..10) {
             val status = runCode(
