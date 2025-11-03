@@ -172,7 +172,6 @@ fun bindStates(fsm: Fsm): Fsm {
     fsm.addMiddleware(TokenizerStates.IN_OPERATOR, fun (lexer: LexerInterface): TokenizerStates? {
         val ch = lexer.peek()
 
-        // Если буфер пуст, добавляем первый символ
         if (lexer.buffer.isEmpty()) {
             lexer.buffer.append(ch)
             lexer.advance()
@@ -182,7 +181,6 @@ fun bindStates(fsm: Fsm): Fsm {
         val first = lexer.buffer.get()
         val combined = first + ch
 
-        // Проверяем двухсимвольные операторы
         val doubleOps = setOf(
             "++", "--", "+=", "-=", "*=", "/=", "%=",
             "<=", ">=", "==", "!=", "||", "&&", "->"
@@ -210,7 +208,6 @@ fun bindStates(fsm: Fsm): Fsm {
             return TokenizerStates.DEFAULT
         }
 
-        // Если не двойной оператор — обрабатываем одиночный
         when (first) {
             "+" -> lexer.putToken(TokenTypes.PLUS, lexer.buffer)
             "-" -> lexer.putToken(TokenTypes.MINUS, lexer.buffer)

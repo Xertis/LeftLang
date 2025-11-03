@@ -28,6 +28,7 @@ data class MiddleWare(val func: (Node, MutableList<Node>, Semantic) -> Unit) {
     }
 
     fun clear() {
+        level = 0
         nodes.clear()
         backups.clear()
     }

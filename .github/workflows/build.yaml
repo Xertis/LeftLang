@@ -23,6 +23,9 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      - name: Install gcc
+        run: gcc --version
+
       - name: Build with Maven
         run: mvn clean compile
 
@@ -30,7 +33,7 @@ jobs:
         run: mvn test
 
       - name: Package JAR
-        run: mvn package -DskipTests
+        run: mvn package
 
       - name: Run JAR as test
         run: java -jar target/LeftLang-1.0-SNAPSHOT.jar
