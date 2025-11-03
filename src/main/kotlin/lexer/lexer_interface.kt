@@ -20,7 +20,7 @@ interface LexerInterface {
     fun isEOF(): Boolean
 
     // Методы для поиска и проверки подстрок
-    fun nextIt(values: Array<String>, skip: Boolean = false): Boolean
+    fun nextIt(values: Array<String>, skip: Boolean = false, escape: Char?=null): Boolean
     fun isIt(value: String, skip: Boolean = false): Boolean
 
     // Методы для работы с токенами

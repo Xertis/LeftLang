@@ -40,7 +40,7 @@ class Lexer(override var source: String) : LexerInterface {
         }
     }
 
-    override fun nextIt(values: Array<String>, skip: Boolean): Boolean {
+    override fun nextIt(values: Array<String>, skip: Boolean, escape: Char?): Boolean {
         var offset = 0
         val sourceLength = source.length
 
@@ -49,6 +49,8 @@ class Lexer(override var source: String) : LexerInterface {
 
             for ((index, value) in values.withIndex()) {
                 if (matched != null) {break}
+
+                if (peek(pos + offset - 1) == escape) continue
 
                 matched = index
                 for (i in value.indices) {

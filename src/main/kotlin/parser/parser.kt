@@ -3,7 +3,6 @@ package parser
 import tokens.Token
 import TokenTypes
 import TokenGroups
-import kotlin.math.exp
 
 class Parser(val tokens: List<Token>) {
     var pos: Int = 0
@@ -12,12 +11,6 @@ class Parser(val tokens: List<Token>) {
     fun advance(): Token? = tokens.getOrNull(pos++)
     fun isEOF(): Boolean = pos >= tokens.size
     fun back(): Token? = tokens.getOrNull(pos--)
-    fun isLogicExpr(expr: BinaryExpr): Boolean {
-        return when (expr.op) {
-            "+", "-", "*", "/", "+=", "-=", "*=", "/=", "%=" -> false
-            else -> true
-        }
-    }
 
     fun makeAst(): Program {
         val decls = mutableListOf<Node>()
@@ -44,12 +37,12 @@ class Parser(val tokens: List<Token>) {
             TokenTypes.KW_CONTINUE -> parseContinue()
             TokenTypes.IDENT -> {
                 when (peek(offset = 1)?.type) {
-                    TokenTypes.EQ -> parseAssign()
+                    TokenTypes.EQ, TokenTypes.LBRACK -> parseAssign()
                     TokenTypes.PLUSEQ,
                     TokenTypes.MINUSEQ,
                     TokenTypes.MULEQ,
                     TokenTypes.DIVEQ,
-                    TokenTypes.MODEQ -> parseVarBinaryExp()
+                    TokenTypes.MODEQ, -> parseVarBinaryExp()
                     else -> parseCall()
                 }
             }
@@ -183,7 +176,7 @@ class Parser(val tokens: List<Token>) {
                 }
 
                 variable is VarRef -> {
-                    Block(listOf(Assign(variable.name, parseExpr())), false)
+                    Block(listOf(Assign(VarRef(variable.name), value=parseExpr())), false)
                 }
 
                 variable == null -> {
@@ -225,15 +218,37 @@ class Parser(val tokens: List<Token>) {
         }
         val name = expect(TokenTypes.IDENT)!!.value
         expect(TokenTypes.COL)
+
+        val isPointer = if (peek()?.type == TokenTypes.MUL) {
+            advance()
+            true
+        } else {
+            false
+        }
         val type = expect(TokenGroups.VARTYPE)!!.type
+
+        val dimension: MutableList<Expr?> = mutableListOf()
+        while (peek()?.type == TokenTypes.LBRACK) {
+            advance()
+
+            if (peek()?.type == TokenTypes.RBRACK) {
+                dimension += null
+                advance()
+                continue
+            }
+            dimension += parseExpr()
+            expect(TokenTypes.RBRACK)
+        }
+
+        expect(TokenTypes.EQ)
+
         if (peek()?.type == TokenTypes.QMARK) {
             advance()
-            return VarDecl(mut, name, type, isNull = true)
-        } else {
-            expect(TokenTypes.EQ)
-            val value = parseExpr()
-            return VarDecl(mut, name, type, value)
+            return VarDecl(mut, name, type, isNull = true, isPointer = isPointer, dimensions = dimension)
         }
+
+        val value = parseExpr()
+        return VarDecl(mut, name, type, value, isPointer = isPointer, dimensions = dimension)
     }
 
     private fun parseConstDecl(): ConstDecl {
@@ -256,6 +271,7 @@ class Parser(val tokens: List<Token>) {
             val pname = expect(TokenTypes.IDENT)!!.value
             expect(TokenTypes.COL)
             val ptype = expect(TokenGroups.VARTYPE)!!.type
+            val dimensions = parseDimensions()
             var defaultValue: Literal? = null
 
             if (peek()?.type == TokenTypes.EQ) {
@@ -272,19 +288,25 @@ class Parser(val tokens: List<Token>) {
 
             if (peek()?.type == TokenTypes.COMMA) advance()
 
-            params.add(Param(pname, ptype, defaultValue))
+            params.add(Param(pname, ptype, defaultValue, dimensions))
         }
 
         expect(TokenTypes.RPAREN)
         var returnType = TokenTypes.KW_VOID
+        var returnPointerCount = 0
         if (expect(TokenTypes.ARROW, soft = true) != null) {
             returnType = expect(TokenGroups.VARTYPE)!!.type
+            while (peek()?.type == TokenTypes.MUL) {
+                returnPointerCount += 1
+                advance()
+            }
         } else {
             back()
         }
 
         val body = parseBlock()
-        return FunDecl(name, returnType, params, body)
+
+        return FunDecl(name, returnType, params, body, returnPointerCount)
     }
 
     private fun parseBlock(ownScopeStack: Boolean=true): Block {
@@ -321,9 +343,17 @@ class Parser(val tokens: List<Token>) {
 
     private fun parseAssign(): Assign {
         val name = expect(TokenTypes.IDENT)!!.value
+        val dimensions = parseDimensions()
+
+        val nonNullDimensions = dimensions.filterNotNull()
+        if (nonNullDimensions.size != dimensions.size) {
+            throw RuntimeException("The index cannot be null")
+        }
+
         expect(TokenTypes.EQ)
-        val expr = parseExpr()
-        return Assign(name, expr)
+        val value = parseExpr()
+
+        return Assign(VarRef(name), nonNullDimensions, value)
     }
 
     private fun parseArg(): Arg {
@@ -343,6 +373,16 @@ class Parser(val tokens: List<Token>) {
         }
         expect(TokenTypes.RPAREN)
         return CallExpr(name, args)
+    }
+
+    private fun parseArray(): Expr {
+        val values = mutableListOf<Expr>()
+        while (peek()?.type != TokenTypes.RBRACE) {
+            values += parseExpr()
+            if (peek()?.type == TokenTypes.COMMA) advance()
+        }
+        advance()
+        return ArrayExpr(values)
     }
 
     // Выражения с приоритетами
@@ -403,14 +443,68 @@ class Parser(val tokens: List<Token>) {
         return expr
     }
 
+    private fun parsePostfixUnary(): Expr {
+        var expr = parsePrimary()
+
+        val postfixUnaryTokens = arrayOf(TokenTypes.INC, TokenTypes.DEC)
+
+        while (peek()?.type in postfixUnaryTokens) {
+            val op = advance()!!.value
+            expr = BinaryExpr(expr, op, Literal(""))
+        }
+
+        return expr
+    }
+
     private fun parseUnary(): Expr {
         return when (peek()?.type) {
-            TokenTypes.NOT, TokenTypes.MINUS -> {
+            TokenTypes.NOT, TokenTypes.MINUS, TokenTypes.INC, TokenTypes.DEC, TokenTypes.LINK, TokenTypes.MUL -> {
                 val op = advance()!!.value
                 val right = parseUnary()
                 BinaryExpr(Literal(""), op, right)
             }
-            else -> parsePrimary()
+            else -> parsePostfixUnary()
+        }
+    }
+
+    private fun parseDimensions(): List<Expr?> {
+        val dimensions = mutableListOf<Expr?>()
+
+        while (peek()?.type == TokenTypes.LBRACK) {
+            advance()
+            dimensions += if (peek()?.type != TokenTypes.RBRACK) parseExpr()
+            else null
+            expect(TokenTypes.RBRACK)
+        }
+
+        return dimensions
+    }
+
+    private fun parseIdent(): Expr {
+        val token = peek(offset = -1)!!
+        val name = token.value
+        when (peek()?.type) {
+            TokenTypes.LPAREN -> {
+                advance()
+                val args = mutableListOf<Expr>()
+                while (peek()?.type != TokenTypes.RPAREN) {
+                    args.add(parseExpr())
+                    if (peek()?.type == TokenTypes.COMMA) advance()
+                }
+                expect(TokenTypes.RPAREN)
+                return CallExpr(name, args)
+            }
+            TokenTypes.EQ -> {
+                back()
+                return parseArg()
+            }
+            TokenTypes.LBRACK -> {
+                val dimensions = parseDimensions()
+                return IndexExpr(VarRef(token.value), dimensions)
+            }
+            else -> {
+                return VarRef(name)
+            }
         }
     }
 
@@ -427,31 +521,12 @@ class Parser(val tokens: List<Token>) {
                 }
                 Literal(num)
             }
+            TokenTypes.LBRACE -> parseArray()
             TokenTypes.KW_TRUE -> Literal("1")
             TokenTypes.KW_FALSE -> Literal("0")
             TokenTypes.STRING -> Literal("\"${token.value}\"")
             TokenTypes.CHAR -> Literal("'${token.value}'")
-            TokenTypes.LINK -> {
-                VarLink(VarRef(expect(TokenTypes.IDENT)!!.value))
-            }
-            TokenTypes.IDENT -> {
-                val name = token.value
-                if (peek()?.type == TokenTypes.LPAREN) {
-                    advance()
-                    val args = mutableListOf<Expr>()
-                    while (peek()?.type != TokenTypes.RPAREN) {
-                        args.add(parseExpr())
-                        if (peek()?.type == TokenTypes.COMMA) advance()
-                    }
-                    expect(TokenTypes.RPAREN)
-                    CallExpr(name, args)
-                } else if (peek()?.type == TokenTypes.EQ) {
-                    back()
-                    parseArg()
-                } else {
-                    VarRef(name)
-                }
-            }
+            TokenTypes.IDENT -> parseIdent()
             TokenTypes.LPAREN -> {
                 val expr = parseExpr()
                 expect(TokenTypes.RPAREN)
@@ -473,7 +548,16 @@ class Parser(val tokens: List<Token>) {
     private fun expect(group: TokenGroups, soft: Boolean = false): Token? {
         val token = advance() ?: throw RuntimeException("Ожидалась группа $group, но конец токенов")
         if (token.group != group) {
-            if (!soft) throw RuntimeException("Ожидалась группа $group, а встретилась ${token.type}")
+            if (!soft) throw RuntimeException("Ожидалась группа $group, а встретился ${token.type}")
+            else return null
+        }
+        return token
+    }
+
+    private fun expect(arrayTypes: Array<TokenTypes>, soft: Boolean = false): Token? {
+        val token = advance() ?: throw RuntimeException("Ожидалась группа $arrayTypes, но конец токенов")
+        if (token.type !in arrayTypes) {
+            if (!soft) throw RuntimeException("Ожидалась группа $arrayTypes, а встретился ${token.type}")
             else return null
         }
         return token

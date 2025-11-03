@@ -182,7 +182,7 @@ fun bindMiddleWares(semantic: Semantic) {
             decl is Assign -> {
                 for (node in nodes) {
                     if (node !is VarDecl) continue
-                    if (node.name == decl.target) {
+                    if (node.name == decl.target.name) {
                         throw RuntimeException("a unmutable variable cannot change its value")
                     }
                 }

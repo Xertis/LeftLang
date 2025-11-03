@@ -24,7 +24,7 @@ enum class TokenTypes {
     INC, DEC,
     EQ, EQEQ, BANGEQ, LT, GT, LTE, GTE, //=, ==, !=, <, >, <=, >=
     AND, OR, NOT,
-    LPAREN, RPAREN, LBRACE, RBRACE, COMMA, SEMI, COL, DOT, RANGE, //(){},;:. ..
+    LPAREN, RPAREN, LBRACE, RBRACE, LBRACK, RBRACK, COMMA, SEMI, COL, DOT, RANGE, //(){}[],;:. ..
     ARROW,
     NEW_LINE, PP_INCLUDE, EOF
 

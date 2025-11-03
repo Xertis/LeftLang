@@ -2,6 +2,7 @@ package generator
 
 import TokenTypes
 import parser.Arg
+import parser.ArrayExpr
 import parser.Assign
 import parser.BinaryExpr
 import parser.Block
@@ -13,6 +14,7 @@ import parser.Expr
 import parser.ForDecl
 import parser.FunDecl
 import parser.Include
+import parser.IndexExpr
 import parser.Literal
 import parser.LogicDecl
 import parser.Node
@@ -97,10 +99,11 @@ class Generator(val program: Program) {
                 false -> "signed"
                 null -> ""
             }
-            params += "$sign ${left2Ctype(param.type)} ${param.name}"
+            params += "$sign ${left2Ctype(param.type)} ${param.name}${genDimensions(param.dimensions, root)}"
         }
         val body = gen(decl.body, root)
-        return "${left2Ctype(decl.returnType)} ${decl.name}${params.joinToString(
+        val pointers = "*".repeat(decl.returnPointerCount)
+        return "${left2Ctype(decl.returnType)}$pointers ${decl.name}${params.joinToString(
             separator = ",",
             prefix = "(",
             postfix = ")"
@@ -178,6 +181,17 @@ class Generator(val program: Program) {
         return code.toString()
     }
 
+    private fun genDimensions(dimensions: List<Expr?>?, root: List<Node>): String {
+        var dimensionsStr = ""
+        if (dimensions == null) return ""
+        for (dimension in dimensions) {
+            val dimensionStrPart = if (dimension != null) gen(dimension, root) else ""
+            dimensionsStr += "[$dimensionStrPart]"
+        }
+
+        return dimensionsStr
+    }
+
     private fun genVar(decl: VarDecl, root: List<Node>): String {
         val isUnsigned = isUnsigned(decl.type)
         val sign = when (isUnsigned) {
@@ -186,8 +200,12 @@ class Generator(val program: Program) {
             null -> ""
         }
 
-        if (!decl.isNull) return "$sign ${left2Ctype(decl.type)} ${decl.name} = ${gen(decl.value!!, root)}"
-        return "$sign ${left2Ctype(decl.type)} ${decl.name}"
+        val dimensions = genDimensions(decl.dimensions, root)
+
+        val point = if (decl.isPointer) '*' else ' '
+
+        if (!decl.isNull) return "$sign ${left2Ctype(decl.type)} $point${decl.name}$dimensions = ${gen(decl.value!!, root)}"
+        return "$sign ${left2Ctype(decl.type)} $point${decl.name}$dimensions"
     }
 
     private fun genConst(decl: ConstDecl, root: List<Node>): String {
@@ -249,6 +267,16 @@ class Generator(val program: Program) {
         return "include $prefix${decl.path}$postfix\n"
     }
 
+    private fun genArray(decl: ArrayExpr, root: List<Node>): String {
+        var array = "{"
+        for ((index, expr) in decl.values.withIndex()) {
+            array += if (index != 0)", ${gen(expr, root)}"
+            else gen(expr, root)
+        }
+
+        return "$array}"
+    }
+
     private fun genRange(decl: Range, root: List<Node>): String {
         val name = decl.name ?: "0"
         val start = gen(decl.start, root)
@@ -257,9 +285,14 @@ class Generator(val program: Program) {
         return "($name >= $start && $name <= $end)"
     }
 
+    private fun genAssign(decl: Assign, root: List<Node>): String {
+        val dimensions = genDimensions(decl.dimensions, root)
+        return "${decl.target.name}$dimensions = ${gen(decl.value, root)}"
+    }
+
     private fun gen(decl: Node, root: List<Node>): String {
         return when (decl) {
-            is Assign -> "${decl.target} = ${gen(decl.value, root)}"
+            is Assign -> genAssign(decl, root)
             is Block -> genBlock(decl, root)
             is ConstDecl -> genConst(decl, root)
             is BinaryExpr -> "(${gen(decl.left, root)} ${decl.op} ${gen(decl.right, root)})"
@@ -283,6 +316,8 @@ class Generator(val program: Program) {
             is Break -> "break;"
             is Continue -> "continue;"
             is RepeatUntilDecl -> genRepeatUntil(decl, root)
+            is ArrayExpr -> genArray(decl, root)
+            is IndexExpr -> "${gen(decl.array, root)}${genDimensions(decl.dimensions, root)}"
         }
     }
 

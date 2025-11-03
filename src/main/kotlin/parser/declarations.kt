@@ -11,7 +11,8 @@ data class FunDecl(
     val name: String,
     val returnType: TokenTypes,
     val params: List<Param>,
-    val body: Block
+    val body: Block,
+    val returnPointerCount: Int=0,
 ) : Node()
 
 data class LogicDecl(
@@ -44,12 +45,21 @@ data class ForDecl(
     val body: Block
 ) : Node()
 
-data class Param(val name: String, val type: TokenTypes, val defaultValue: Expr?=null)
+data class Param(val name: String, val type: TokenTypes, val defaultValue: Expr?=null, val dimensions: List<Expr?> = emptyList())
 data class Arg(val name: String, val value: Expr): Expr()
 
 // --- операторы ---
-data class VarDecl(val mutable: Boolean, val name: String, val type: TokenTypes, val value: Expr?=null, val isNull: Boolean=false) : Node()
-data class Assign(val target: String, val value: Expr) : Node()
+data class VarDecl(
+    val mutable: Boolean,
+    val name: String,
+    val type: TokenTypes,
+    val value: Expr?=null,
+    val isNull: Boolean=false,
+    val isPointer: Boolean=false,
+    val dimensions: List<Expr?> = emptyList()
+) : Node()
+
+data class Assign(val target: VarRef, val dimensions: List<Expr> = emptyList(),  val value: Expr) : Node()
 data class VarBinaryExpr(val variable: VarRef, val op: String, val expr: Expr): Node()
 data class Return(val value: Expr) : Node()
 data class Block(var statements: List<Node>, val ownScopeStack: Boolean=true) : Node()
@@ -59,9 +69,11 @@ sealed class Expr : Node()
 data class Literal(val value: Any) : Expr()
 data class VarRef(val name: String) : Expr()
 data class VarLink(val ref: VarRef): Expr()
+data class ArrayExpr(val values: List<Expr> = emptyList()) : Expr()
 data class BinaryExpr(val left: Expr, val op: String, val right: Expr) : Expr()
 data class CallExpr(val name: String, val args: List<Expr>) : Expr()
 data class Range(val start: Expr, val end: Expr, var name: String?) : Expr()
+data class IndexExpr(val array: Expr, val dimensions: List<Expr?>) : Expr()
 class Break() : Expr()
 class Continue() : Expr()
 

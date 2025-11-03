@@ -6,7 +6,7 @@ import TokenTypes
 import TokenizerStates
 
 const val VALID_OPERATOR_SYMBOLS = "-+/*%=<>&|!?"
-const val VALID_DELIMETER_SYMBOLS = ":;(){}.,"
+const val VALID_DELIMETER_SYMBOLS = ":;(){}[].,"
 
 fun bindStates(fsm: Fsm): Fsm {
     fsm.addMiddleware(TokenizerStates.DEFAULT,
@@ -36,14 +36,14 @@ fun bindStates(fsm: Fsm): Fsm {
 
             if (lexer.isIt("\"", true)) {
                 lexer.putToken(TokenTypes.STRING, fun () {
-                    lexer.nextIt(arrayOf("\""), true)
+                    lexer.nextIt(arrayOf("\""), true, escape = '\\')
                 }, true)
                 return null
             }
 
             if (lexer.isIt("'", true)) {
                 lexer.putToken(TokenTypes.CHAR, fun () {
-                    lexer.nextIt(arrayOf("'"), true)
+                    lexer.nextIt(arrayOf("'"), true, escape = '\\')
                 }, true)
                 return null
             }
@@ -172,25 +172,28 @@ fun bindStates(fsm: Fsm): Fsm {
     fsm.addMiddleware(TokenizerStates.IN_OPERATOR, fun (lexer: LexerInterface): TokenizerStates? {
         val ch = lexer.peek()
 
-        if (ch in VALID_OPERATOR_SYMBOLS && lexer.buffer.length < 2) {
+        // Если буфер пуст, добавляем первый символ
+        if (lexer.buffer.isEmpty()) {
             lexer.buffer.append(ch)
             lexer.advance()
             return null
-        } else {
-            when (lexer.buffer.get()) {
+        }
+
+        val first = lexer.buffer.get()
+        val combined = first + ch
+
+        // Проверяем двухсимвольные операторы
+        val doubleOps = setOf(
+            "++", "--", "+=", "-=", "*=", "/=", "%=",
+            "<=", ">=", "==", "!=", "||", "&&", "->"
+        )
+
+        if (combined in doubleOps) {
+            lexer.buffer.append(ch)
+            lexer.advance()
+            when (combined) {
                 "++" -> lexer.putToken(TokenTypes.INC, lexer.buffer)
                 "--" -> lexer.putToken(TokenTypes.DEC, lexer.buffer)
-                "+" -> lexer.putToken(TokenTypes.PLUS, lexer.buffer)
-                "-" -> lexer.putToken(TokenTypes.MINUS, lexer.buffer)
-                "*" -> lexer.putToken(TokenTypes.MUL, lexer.buffer)
-                "/" -> lexer.putToken(TokenTypes.DIV, lexer.buffer)
-                "%" -> lexer.putToken(TokenTypes.MOD, lexer.buffer)
-                "<" -> lexer.putToken(TokenTypes.LT, lexer.buffer)
-                ">" -> lexer.putToken(TokenTypes.GT, lexer.buffer)
-                "=" -> lexer.putToken(TokenTypes.EQ, lexer.buffer)
-                "!" -> lexer.putToken(TokenTypes.NOT, lexer.buffer)
-                "&" -> lexer.putToken(TokenTypes.LINK, lexer.buffer)
-                "?" -> lexer.putToken(TokenTypes.QMARK, lexer.buffer)
                 "+=" -> lexer.putToken(TokenTypes.PLUSEQ, lexer.buffer)
                 "-=" -> lexer.putToken(TokenTypes.MINUSEQ, lexer.buffer)
                 "*=" -> lexer.putToken(TokenTypes.MULEQ, lexer.buffer)
@@ -204,10 +207,32 @@ fun bindStates(fsm: Fsm): Fsm {
                 "&&" -> lexer.putToken(TokenTypes.AND, lexer.buffer)
                 "->" -> lexer.putToken(TokenTypes.ARROW, lexer.buffer)
             }
-
             return TokenizerStates.DEFAULT
         }
+
+        // Если не двойной оператор — обрабатываем одиночный
+        when (first) {
+            "+" -> lexer.putToken(TokenTypes.PLUS, lexer.buffer)
+            "-" -> lexer.putToken(TokenTypes.MINUS, lexer.buffer)
+            "*" -> lexer.putToken(TokenTypes.MUL, lexer.buffer)
+            "/" -> lexer.putToken(TokenTypes.DIV, lexer.buffer)
+            "%" -> lexer.putToken(TokenTypes.MOD, lexer.buffer)
+            "<" -> lexer.putToken(TokenTypes.LT, lexer.buffer)
+            ">" -> lexer.putToken(TokenTypes.GT, lexer.buffer)
+            "=" -> lexer.putToken(TokenTypes.EQ, lexer.buffer)
+            "!" -> lexer.putToken(TokenTypes.NOT, lexer.buffer)
+            "&" -> lexer.putToken(TokenTypes.LINK, lexer.buffer)
+            "?" -> lexer.putToken(TokenTypes.QMARK, lexer.buffer)
+        }
+
+        if (ch in VALID_OPERATOR_SYMBOLS) {
+            lexer.buffer = TokenBuffer(lexer.line, lexer.col)
+            return TokenizerStates.IN_OPERATOR
+        }
+
+        return TokenizerStates.DEFAULT
     })
+
 
     fsm.addMiddleware(TokenizerStates.IN_DELIMETER, fun (lexer: LexerInterface): TokenizerStates? {
         val ch = lexer.peek()
@@ -228,6 +253,8 @@ fun bindStates(fsm: Fsm): Fsm {
                 ")" -> lexer.putToken(TokenTypes.RPAREN, lexer.buffer)
                 "{" -> lexer.putToken(TokenTypes.LBRACE, lexer.buffer)
                 "}" -> lexer.putToken(TokenTypes.RBRACE, lexer.buffer)
+                "[" -> lexer.putToken(TokenTypes.LBRACK, lexer.buffer)
+                "]" -> lexer.putToken(TokenTypes.RBRACK, lexer.buffer)
                 ".." -> lexer.putToken(TokenTypes.RANGE, lexer.buffer)
             }
 
