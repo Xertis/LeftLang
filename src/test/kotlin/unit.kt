@@ -63,4 +63,30 @@ class LeftTests {
         assertEquals(null, status1)
         assertEquals(true, status2 != null)
     }
+
+    @Test
+    fun whenTest() {
+        var res = ""
+        for (i in 1..10) {
+            val status = runCode(
+                """
+                #include <stdio.h>
+                fun main() {
+                    var x: Int = $i
+                    when (x) {
+                        1 -> {printf("1")}
+                        2 -> {printf("2")}
+                        3 -> {printf("3")}
+                        4, 5 -> {printf("4")}
+                        6, 7, 8 -> {printf("5")}
+                        9, 10 -> {printf("6")}
+                    }
+                }
+                """
+            )
+            res += status
+        }
+
+        assertEquals("1234455566", res)
+    }
 }
