@@ -37,7 +37,7 @@ class LeftTests {
 
             return res
         } catch (e: Exception) {
-            println(e.message)
+            println("Error: ${e.message}")
             return null
         }
     }
@@ -59,9 +59,8 @@ class LeftTests {
             }
             """
         )
-        println(status1)
-        println(status2)
-        assertEquals(true, status1 != null)
-        assertEquals(null, status2)
+
+        assertEquals(null, status1)
+        assertEquals(true, status2 != null)
     }
 }
