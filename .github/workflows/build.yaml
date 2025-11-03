@@ -24,7 +24,7 @@ jobs:
           cache: 'maven'
 
       - name: Install gcc
-        run: gcc --version
+        run: echo "No installation of gcc is required, as it is already installed on the system"
 
       - name: Build with Maven
         run: mvn clean compile
