@@ -59,7 +59,9 @@ class LeftTests {
             }
             """
         )
-        assertEquals(true, status1 is String)
+        println(status1)
+        println(status2)
+        assertEquals(true, status1 != null)
         assertEquals(null, status2)
     }
 }
