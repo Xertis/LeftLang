@@ -33,6 +33,10 @@ data class WhileDecl(
     val body: Block
 ) : Node()
 
+data class LoopDecl(
+    val body: Block
+) : Node()
+
 data class RepeatUntilDecl(
     val expr: Expr,
     val body: Block

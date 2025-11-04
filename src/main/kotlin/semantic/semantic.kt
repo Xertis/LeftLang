@@ -8,6 +8,7 @@ import parser.ForDecl
 import parser.FunDecl
 import parser.Include
 import parser.LogicDecl
+import parser.LoopDecl
 import parser.Node
 import parser.PreProcDecl
 import parser.Program
@@ -134,6 +135,11 @@ object Semantic {
                     backUpMiddlewares()
                 }
                 is RepeatUntilDecl -> {
+                    saveMiddlewares()
+                    process(decl.body.statements)
+                    backUpMiddlewares()
+                }
+                is LoopDecl -> {
                     saveMiddlewares()
                     process(decl.body.statements)
                     backUpMiddlewares()

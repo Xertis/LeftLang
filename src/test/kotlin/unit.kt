@@ -43,8 +43,8 @@ class LeftTests {
     }
 
     @Test
-    fun valAndVar() {
-        println("run test valAndVar")
+    fun valAndVarTest() {
+        println("run test valAndVarTest")
         val status1 = runCode("""
             fun main() {
                 val x: Heavy = ?
@@ -146,5 +146,52 @@ class LeftTests {
         """.trimIndent())
 
         assertEquals("56", res3)
+    }
+
+    @Test
+    fun loopTest() {
+        println("run test loopTest")
+
+        val res1 = runCode("""
+                #include <stdio.h>
+                
+                fun main() {
+                    var x: int = 0
+                
+                    loop {
+                        if x > 10 {
+                            break
+                        }
+                
+                        x += 1
+                    }
+                
+                    printf("%d", x)
+                }
+            """
+        )
+
+        assertEquals("11", res1)
+
+        val res2 = runCode("""
+                #include <stdio.h>
+                
+                fun main() {
+                    val x: int = 0
+                
+                    loop {
+                        if x > 10 {
+                            break
+                        }
+                
+                        x += 1
+                    }
+                
+                    printf("%d", x)
+                }
+            """
+        )
+
+        assertEquals(null, res2)
     }
 }

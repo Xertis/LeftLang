@@ -17,6 +17,7 @@ import parser.Include
 import parser.IndexExpr
 import parser.Literal
 import parser.LogicDecl
+import parser.LoopDecl
 import parser.Node
 import parser.PreProcDecl
 import parser.Program
@@ -166,6 +167,10 @@ class Generator(val program: Program) {
         val step = gen(decl.step, root)
         val body = gen(decl.body, root)
         return "for ($init; $range; ${decl.init.name} += ($step)) {\n$body}\n"
+    }
+
+    private fun genLoop(decl: LoopDecl, root: List<Node>): String {
+        return "for (;;) {\n${gen(decl.body, root)}}"
     }
 
     private fun genBlock(decl: Block, root: List<Node>): String {
@@ -318,6 +323,7 @@ class Generator(val program: Program) {
             is RepeatUntilDecl -> genRepeatUntil(decl, root)
             is ArrayExpr -> genArray(decl, root)
             is IndexExpr -> "${gen(decl.array, root)}${genDimensions(decl.dimensions, root)}"
+            is LoopDecl -> genLoop(decl, root)
         }
     }
 
