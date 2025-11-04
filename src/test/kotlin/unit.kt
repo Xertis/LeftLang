@@ -96,11 +96,11 @@ class LeftTests {
     fun arrayTest() {
         println("run test arrayTest")
 
-        var res1 = runCode("""
+        val res1 = runCode("""
             #include <stdio.h>
             fun main() {
-                val x: int[] = ?
-                val y: int[][1] = ?
+                val x: int[1] = ?
+                val y: int[2][1] = ?
                 var z: short[] = {
                     1, 2, 3, -255, -100
                 }
@@ -123,11 +123,12 @@ class LeftTests {
         assertEquals(null, res2)
 
         val res3 = runCode("""
+            #include <stdio.h>
             fun sum(rows: int, cols: int, arr: int[rows][cols]) -> int {
                 var sum: int = 0
                 
-                for (var i: int=0 in 0..rows) {
-                    for (var j: int=0 in 0..cols) {
+                for (var i: int=0 in 0..rows-1) {
+                    for (var j: int=0 in 0..cols-1) {
                         sum += arr[i][j]
                     }
                 }
@@ -138,12 +139,12 @@ class LeftTests {
                 val x: int[3][4] = {
                     {1, 2, 3, 4},
                     {5, 6, 7, 8},
-                    {9, 10, 11, 12}
+                    {9, 10, 11, -10}
                 }
                 printf("%d", sum(arr=x, rows=3, cols=4))
             }
         """.trimIndent())
 
-        assertEquals("78", res3)
+        assertEquals("56", res3)
     }
 }
