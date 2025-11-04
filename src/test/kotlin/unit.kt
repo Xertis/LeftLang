@@ -140,7 +140,7 @@ class LeftTests {
                     {5, 6, 7, 8},
                     {9, 10, 11, 12}
                 }
-                printf(%d, sum(arr=x, rows=3, cols=4))
+                printf("%d", sum(arr=x, rows=3, cols=4))
             }
         """.trimIndent())
 
