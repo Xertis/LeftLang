@@ -91,4 +91,59 @@ class LeftTests {
 
         assertEquals("1234455566", res)
     }
+
+    @Test
+    fun arrayTest() {
+        println("run test arrayTest")
+
+        var res1 = runCode("""
+            #include <stdio.h>
+            fun main() {
+                val x: int[] = ?
+                val y: int[][1] = ?
+                var z: short[] = {
+                    1, 2, 3, -255, -100
+                }
+                
+                z[1] = -89
+                printf("%d", z[1])
+            }
+            """
+        )
+
+        assertEquals("-89", res1)
+
+        val res2 = runCode("""
+            fun main() {
+                val x: int[3] = {1, 0, -100}
+                x[1] = -256
+            }
+        """.trimIndent())
+
+        assertEquals(null, res2)
+
+        val res3 = runCode("""
+            fun sum(rows: int, cols: int, arr: int[rows][cols]) -> int {
+                var sum: int = 0
+                
+                for (var i: int=0 in 0..rows) {
+                    for (var j: int=0 in 0..cols) {
+                        sum += arr[i][j]
+                    }
+                }
+                
+                return sum
+            }
+            fun main() {
+                val x: int[3][4] = {
+                    {1, 2, 3, 4},
+                    {5, 6, 7, 8},
+                    {9, 10, 11, 12}
+                }
+                printf(%d, sum(arr=x, rows=3, cols=4))
+            }
+        """.trimIndent())
+
+        assertEquals("78", res3)
+    }
 }
