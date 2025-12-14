@@ -22,8 +22,10 @@ fun bindStates(fsm: Fsm): Fsm {
                 }
 
                 '\n' -> {
-                    // lexer.putToken(TokenTypes.NEW_LINE, lexer::advance)
-                    lexer.advance(); return null
+                    lexer.putToken(TokenTypes.NEW_LINE, lexer::advance)
+                    return null
+
+                    //lexer.advance(); return null
                 }
             }
 
@@ -151,6 +153,8 @@ fun bindStates(fsm: Fsm): Fsm {
                 "fun" -> lexer.putToken(TokenTypes.KW_FUN, lexer.buffer)
                 "return" -> lexer.putToken(TokenTypes.KW_RETURN, lexer.buffer)
 
+                "include" -> lexer.putToken(TokenTypes.INCLUDE, lexer.buffer)
+
                 else -> lexer.putToken(TokenTypes.IDENT, lexer.buffer)
             }
             return TokenizerStates.DEFAULT
@@ -264,7 +268,7 @@ fun bindStates(fsm: Fsm): Fsm {
         lexer.advance()
 
         when {
-            lexer.isIt("include") -> lexer.putToken(TokenTypes.PP_INCLUDE, fun() {
+            lexer.isIt("include") -> lexer.putToken(TokenTypes.INCLUDE, fun() {
                 lexer.isIt("include", true)
             })
         }

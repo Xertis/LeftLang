@@ -1,428 +1,157 @@
 package parser
 
+import POSTFIXED_UNARY_TOKEN_TYPES
+import PREFIXED_UNARY_TOKEN_TYPES
 import tokens.Token
 import TokenTypes
 import TokenGroups
+import TypeToStr
+
+data class Middleware(val isStatement: Boolean = true, val ware: (Parser) -> Node?, val trigger: (Parser, TokenTypes) -> Boolean) {
+    fun run(parser: Parser, decl: TokenTypes): Node? {
+        return if (trigger(parser, decl)) ware(parser)
+        else null
+    }
+}
 
 class Parser(val tokens: List<Token>) {
     var pos: Int = 0
 
-    fun peek(_pos: Int=pos, offset: Int=0): Token? = tokens.getOrNull(_pos+offset)
-    fun advance(): Token? = tokens.getOrNull(pos++)
-    fun isEOF(): Boolean = pos >= tokens.size
-    fun back(): Token? = tokens.getOrNull(pos--)
+    val statements = mutableListOf<Middleware>()
+
+    fun peek(_pos: Int = pos, offset: Int = 0, skipNewLine: Boolean = true): Token? {
+        var currentOffset = 0
+
+        for (i in _pos until tokens.size) {
+            val token = tokens[i]
+            if (!skipNewLine || token.type != TokenTypes.NEW_LINE) {
+                if (currentOffset == offset) {
+                    return token
+                }
+                currentOffset++
+            }
+        }
+        return null
+    }
+
+    fun advance(skipNewLine: Boolean = true): Token? {
+        while (pos < tokens.size) {
+            val token = tokens[pos]
+            pos++
+            if (!skipNewLine || token.type != TokenTypes.NEW_LINE) {
+                return token
+            }
+        }
+        return null
+    }
+
+    fun isEOF(skipNewLine: Boolean = true): Boolean {
+        var i = pos
+        while (i < tokens.size) {
+            if (!skipNewLine || tokens[i].type != TokenTypes.NEW_LINE) {
+                return false
+            }
+            i++
+        }
+        return true
+    }
+
+    fun back(skipNewLine: Boolean = true): Token? {
+        if (pos <= 0) return null
+
+        var newPos = pos - 1
+        while (newPos >= 0) {
+            val token = tokens[newPos]
+            if (!skipNewLine || token.type != TokenTypes.NEW_LINE) {
+                break
+            }
+            newPos--
+        }
+
+        if (newPos < 0) return null
+
+        pos = newPos
+        return tokens[newPos]
+    }
+
+    init {
+        bindStates(this)
+    }
 
     fun makeAst(): Program {
         val decls = mutableListOf<Node>()
+        //println(tokens)
         while (!isEOF()) {
             val node = parseStatement()
-            decls.add(node)
+            if (node != null) decls.add(node)
         }
         return Program(decls)
     }
 
-    fun parseStatement(): Node {
-        return when (peek()?.type) {
-            TokenTypes.VAL, TokenTypes.VAR -> parseVarDecl()
-            TokenTypes.CONST -> parseConstDecl()
-            TokenTypes.KW_FUN -> parseFunDecl()
-            TokenTypes.KW_IF -> parseIf()
-            TokenTypes.KW_RETURN -> parseReturn()
-            TokenTypes.PP_INCLUDE -> parsePreProc()
-            TokenTypes.KW_WHEN -> parseWhen()
-            TokenTypes.KW_WHILE -> parseWhile()
-            TokenTypes.KW_REPEAT -> parseRepeatUntil()
-            TokenTypes.KW_LOOP -> parseLoop()
-            TokenTypes.KW_FOR -> parseFor()
-            TokenTypes.KW_BREAK -> parseBreak()
-            TokenTypes.KW_CONTINUE -> parseContinue()
-            TokenTypes.IDENT -> {
-                when (peek(offset = 1)?.type) {
-                    TokenTypes.EQ, TokenTypes.LBRACK -> parseAssign()
-                    TokenTypes.PLUSEQ,
-                    TokenTypes.MINUSEQ,
-                    TokenTypes.MULEQ,
-                    TokenTypes.DIVEQ,
-                    TokenTypes.MODEQ, -> parseVarBinaryExp()
-                    else -> parseCall()
-                }
+    fun expect(type: TokenTypes, soft: Boolean = false, skipNewLine: Boolean = true): Token? {
+        val token = advance(skipNewLine) ?: throw RuntimeException("Ожидался $type, но конец токенов")
+        if (token.type != type) {
+            if (!soft) throw RuntimeException("Ожидался $type, а встретилось ${token.type}")
+            else return null
+        }
+        return token
+    }
+
+    fun expect(group: TokenGroups, soft: Boolean = false, skipNewLine: Boolean = true): Token? {
+        val token = advance(skipNewLine) ?: throw RuntimeException("Ожидалась группа $group, но конец токенов")
+        if (token.group != group) {
+            if (!soft) throw RuntimeException("Ожидалась группа $group, а встретился ${token.type}")
+            else return null
+        }
+        return token
+    }
+
+    fun expect(group: Array<TokenTypes>, soft: Boolean = false, skipNewLine: Boolean = true): Token? {
+        val token = advance(skipNewLine) ?: throw RuntimeException("Ожидалась группа $group, но конец токенов")
+        if (token.type !in group) {
+            if (!soft) throw RuntimeException("Ожидалась группа $group, а встретился ${token.type}")
+            else return null
+        }
+        return token
+    }
+
+    fun parseStatement(): Node? {
+        val type = peek()?.type ?: return null
+
+        for (ware in statements) {
+            val res = ware.run(this, type)
+            if (res != null) {
+                return res
             }
-            else -> throw RuntimeException("Неожиданный токен: ${peek()}")
-        }
-    }
-
-    // Условные выражения
-    private fun parseIf(): LogicDecl {
-        expect(TokenTypes.KW_IF)
-        val condition = parseExpr()
-        val body = parseBlock(false)
-        val elifs = mutableListOf<LogicDecl>()
-
-        while (peek()?.type == TokenTypes.KW_ELIF) {
-            advance()
-            val elifCond = parseExpr()
-            val elifBody = parseBlock(false)
-            elifs.add(LogicDecl(TokenTypes.KW_ELIF, elifCond, elifBody))
         }
 
-        var elseBlock: Block? = null
-        if (peek()?.type == TokenTypes.KW_ELSE) {
-            advance()
-            elseBlock = parseBlock(false)
-        }
-
-        return LogicDecl(TokenTypes.KW_IF, condition, body, elifs.ifEmpty { null }, elseBlock)
+        return parseExpr()
     }
 
-    private fun parseWhile(): WhileDecl {
-        expect(TokenTypes.KW_WHILE)
-        val logic = parseExpr()
-        val body = parseBlock(false)
-        return WhileDecl(logic, body)
+    fun addStatement(ware: (Parser) -> Node?, trigger: (Parser, TokenTypes) -> Boolean) {
+        statements += Middleware(true, ware, trigger)
     }
 
-    private fun parseRepeatUntil(): RepeatUntilDecl {
-        expect(TokenTypes.KW_REPEAT)
-        val body = parseBlock(false)
-        expect(TokenTypes.KW_UNTIL)
-        val logic = parseExpr()
-        return RepeatUntilDecl(logic, body)
+    fun parseExpr(): Expr = parseOr()
+
+    private fun parseOr(): Expr = parseInfix(TokenTypes.OR) { left, op, right ->
+        BinaryExpr(left, op, right)
     }
 
-    private fun parseLoop(): LoopDecl {
-        expect(TokenTypes.KW_LOOP)
-        return LoopDecl(parseBlock())
-    }
-
-    private fun parseBreak(): Break {
-        expect(TokenTypes.KW_BREAK)
-        return Break()
-    }
-
-    private fun parseContinue(): Continue {
-        expect(TokenTypes.KW_CONTINUE)
-        return Continue()
-    }
-
-    private fun parseRange(): Range {
-        val startExpr = parseExpr()
-        expect(TokenTypes.RANGE)
-        val endExpr = parseExpr()
-        return Range(startExpr, endExpr, null)
-    }
-
-    private fun parseFor(): ForDecl {
-        expect(TokenTypes.KW_FOR)
-        expect(TokenTypes.LPAREN)
-
-        val variable = parseVarDecl()
-        expect(TokenTypes.KW_IN)
-
-        val range = parseRange()
-        range.name = variable.name
-
-        var stepExpr: Expr = Literal("1")
-        if (peek()?.type == TokenTypes.COMMA) {
-            advance()
-            stepExpr = parseExpr()
-        }
-
-        expect(TokenTypes.RPAREN)
-        val body = parseBlock(false)
-        return ForDecl(
-            init = variable,
-            range = range,
-            step = stepExpr,
-            body = body
-        )
-    }
-
-    private fun parseWhen(): WhenDecl {
-        expect(TokenTypes.KW_WHEN)
-
-        val variable: Expr? = expect(TokenTypes.LPAREN, soft = true)?.let {
-            val expr = parseExpr()
-            expect(TokenTypes.RPAREN)
-            expr
-        } ?: run {
-            back()
-            null
-        }
-
-        expect(TokenTypes.LBRACE)
-
-        val branches = mutableListOf<LogicDecl>()
-        var elseBlock: Block? = null
-        var isFirst = true
-
-        while (peek()?.type != TokenTypes.RBRACE && !isEOF()) {
-            val isElse = peek()?.type == TokenTypes.KW_ELSE
-            val conditions = mutableListOf<Expr>()
-
-            if (!isElse) {
-                do {
-                    val cond = parseExpr()
-
-                    conditions += if (variable != null) {
-                        if (cond is Literal) BinaryExpr(variable, "==", cond)
-                        else cond
-                    } else {
-                        cond
-                    }
-                } while (peek()?.type == TokenTypes.COMMA && advance() != null)
-            } else {
-                advance()
-            }
-
-            expect(TokenTypes.ARROW)
-
-            val body = when {
-                peek()?.type == TokenTypes.LBRACE -> {
-                    parseBlock(false)
-                }
-
-                variable is VarRef -> {
-                    Block(listOf(Assign(VarRef(variable.name), value=parseExpr())), false)
-                }
-
-                variable == null -> {
-                    Block(listOf(parseExpr()), false)
-                }
-
-                else -> {
-                    throw RuntimeException("Ожидался блок { ... } или присваивание после ->")
-                }
-            }
-
-            if (!isElse) {
-                val merged = conditions.reduceOrNull { a, b -> BinaryExpr(a, "||", b) }
-                    ?: throw RuntimeException("Пустое условие в when")
-
-                branches += LogicDecl(
-                    if (isFirst) TokenTypes.KW_IF else TokenTypes.KW_ELIF,
-                    merged,
-                    body
-                )
-            } else {
-                elseBlock = body
-                break
-            }
-
-            isFirst = false
-        }
-
-        expect(TokenTypes.RBRACE)
-        return WhenDecl(branches, elseBlock)
-    }
-
-    // Парсинг переменной
-    private fun parseVarDecl(): VarDecl {
-        val mut = when (advance()!!.type) {
-            TokenTypes.VAR -> true
-            TokenTypes.VAL -> false
-            else -> throw RuntimeException("Expected \"val\" or \"var\" but found ${peek()}")
-        }
-        val name = expect(TokenTypes.IDENT)!!.value
-        expect(TokenTypes.COL)
-
-        val isPointer = if (peek()?.type == TokenTypes.MUL) {
-            advance()
-            true
-        } else {
-            false
-        }
-        val type = expect(TokenGroups.VARTYPE)!!.type
-
-        val dimension: MutableList<Expr?> = mutableListOf()
-        while (peek()?.type == TokenTypes.LBRACK) {
-            advance()
-
-            if (peek()?.type == TokenTypes.RBRACK) {
-                dimension += null
-                advance()
-                continue
-            }
-            dimension += parseExpr()
-            expect(TokenTypes.RBRACK)
-        }
-
-        expect(TokenTypes.EQ)
-
-        if (peek()?.type == TokenTypes.QMARK) {
-            advance()
-            return VarDecl(mut, name, type, isNull = true, isPointer = isPointer, dimensions = dimension)
-        }
-
-        val value = parseExpr()
-        return VarDecl(mut, name, type, value, isPointer = isPointer, dimensions = dimension)
-    }
-
-    private fun parseConstDecl(): ConstDecl {
-        expect(TokenTypes.CONST)
-        val name = expect(TokenTypes.IDENT)!!.value
-        expect(TokenTypes.COL)
-        val type = expect(TokenGroups.VARTYPE)!!.type
-        expect(TokenTypes.EQ)
-        val value = parseExpr()
-        return ConstDecl(name, type, value)
-    }
-
-    // Парсинг функции
-    private fun parseFunDecl(): FunDecl {
-        expect(TokenTypes.KW_FUN)
-        val name = expect(TokenTypes.IDENT)!!.value
-        expect(TokenTypes.LPAREN)
-        val params = mutableListOf<Param>()
-        while (peek()?.type != TokenTypes.RPAREN) {
-            val pname = expect(TokenTypes.IDENT)!!.value
-            expect(TokenTypes.COL)
-            val ptype = expect(TokenGroups.VARTYPE)!!.type
-            val dimensions = parseDimensions()
-            var defaultValue: Literal? = null
-
-            if (peek()?.type == TokenTypes.EQ) {
-                advance()
-                val expr = parseExpr()
-
-                if (expr !is Literal) {
-                    throw RuntimeException("Единственное допустимое значение дефолтного значения аргумента функции - Литерал")
-                }
-
-                defaultValue = expr
-
-            }
-
-            if (peek()?.type == TokenTypes.COMMA) advance()
-
-            params.add(Param(pname, ptype, defaultValue, dimensions))
-        }
-
-        expect(TokenTypes.RPAREN)
-        var returnType = TokenTypes.KW_VOID
-        var returnPointerCount = 0
-        if (expect(TokenTypes.ARROW, soft = true) != null) {
-            returnType = expect(TokenGroups.VARTYPE)!!.type
-            while (peek()?.type == TokenTypes.MUL) {
-                returnPointerCount += 1
-                advance()
-            }
-        } else {
-            back()
-        }
-
-        val body = parseBlock()
-
-        return FunDecl(name, returnType, params, body, returnPointerCount)
-    }
-
-    private fun parseBlock(ownScopeStack: Boolean=true): Block {
-        expect(TokenTypes.LBRACE)
-        val stmts = mutableListOf<Node>()
-        while (peek()?.type != TokenTypes.RBRACE && !isEOF()) {
-            stmts.add(parseStatement())
-        }
-        expect(TokenTypes.RBRACE)
-        return Block(stmts, ownScopeStack)
-    }
-
-    private fun parseReturn(): Return {
-        expect(TokenTypes.KW_RETURN)
-        val expr = parseExpr()
-        return Return(expr)
-    }
-
-    private fun parseVarBinaryExp(): VarBinaryExpr {
-        val name = expect(TokenTypes.IDENT)!!.value
-        val opToken = advance()!!
-
-        val expr = parseExpr()
-
-        return when (opToken.type) {
-            TokenTypes.PLUSEQ -> VarBinaryExpr(VarRef(name),"+=", expr)
-            TokenTypes.MINUSEQ -> VarBinaryExpr(VarRef(name),"-=", expr)
-            TokenTypes.MULEQ -> VarBinaryExpr(VarRef(name),"*=", expr)
-            TokenTypes.DIVEQ -> VarBinaryExpr(VarRef(name),"/=", expr)
-            TokenTypes.MODEQ -> VarBinaryExpr(VarRef(name),"%=", expr)
-            else -> throw RuntimeException("Ожидался оператор присваивания, а встретился ${opToken.type}")
-        }
-    }
-
-    private fun parseAssign(): Assign {
-        val name = expect(TokenTypes.IDENT)!!.value
-        val dimensions = parseDimensions()
-
-        val nonNullDimensions = dimensions.filterNotNull()
-        if (nonNullDimensions.size != dimensions.size) {
-            throw RuntimeException("The index cannot be null")
-        }
-
-        expect(TokenTypes.EQ)
-        val value = parseExpr()
-
-        return Assign(VarRef(name), nonNullDimensions, value)
-    }
-
-    private fun parseArg(): Arg {
-        val name = expect(TokenTypes.IDENT)!!.value
-        expect(TokenTypes.EQ)
-        val expr = parseExpr()
-        return Arg(name, expr)
-    }
-
-    private fun parseCall(): CallExpr {
-        val name = expect(TokenTypes.IDENT)!!.value
-        expect(TokenTypes.LPAREN)
-        val args = mutableListOf<Expr>()
-        while (peek()?.type != TokenTypes.RPAREN) {
-            args.add(parseExpr())
-            if (peek()?.type == TokenTypes.COMMA) advance()
-        }
-        expect(TokenTypes.RPAREN)
-        return CallExpr(name, args)
-    }
-
-    private fun parseArray(): Expr {
-        val values = mutableListOf<Expr>()
-        while (peek()?.type != TokenTypes.RBRACE) {
-            values += parseExpr()
-            if (peek()?.type == TokenTypes.COMMA) advance()
-        }
-        advance()
-        return ArrayExpr(values)
-    }
-
-    // Выражения с приоритетами
-    private fun parseExpr(): Expr = parseOr()
-
-    private fun parseOr(): Expr {
-        var expr = parseAnd()
-        while (peek()?.type == TokenTypes.OR) {
-            val op = advance()!!.value
-            val right = parseAnd()
-            expr = BinaryExpr(expr, op, right)
-        }
-        return expr
-    }
-
-    private fun parseAnd(): Expr {
-        var expr = parseComparison()
-        while (peek()?.type == TokenTypes.AND) {
-            val op = advance()!!.value
-            val right = parseComparison()
-            expr = BinaryExpr(expr, op, right)
-        }
-        return expr
+    private fun parseAnd(): Expr = parseInfix(TokenTypes.AND) { left, op, right ->
+        BinaryExpr(left, op, right)
     }
 
     private fun parseComparison(): Expr {
         var expr = parseAddSub()
-        while (peek()?.type in listOf(
+
+        while (peek(skipNewLine = false)?.type in listOf(
                 TokenTypes.EQEQ, TokenTypes.BANGEQ,
                 TokenTypes.LT, TokenTypes.LTE,
                 TokenTypes.GT, TokenTypes.GTE
             )
         ) {
-            val op = advance()!!.value
+            val op = advance(skipNewLine = false)!!.value
             val right = parseAddSub()
             expr = BinaryExpr(expr, op, right)
         }
@@ -431,8 +160,10 @@ class Parser(val tokens: List<Token>) {
 
     private fun parseAddSub(): Expr {
         var expr = parseMulDiv()
-        while (peek()?.type == TokenTypes.PLUS || peek()?.type == TokenTypes.MINUS) {
-            val op = advance()!!.value
+
+        while (peek(skipNewLine = false)?.type == TokenTypes.PLUS ||
+            peek(skipNewLine = false)?.type == TokenTypes.MINUS) {
+            val op = advance(skipNewLine = false)!!.value
             val right = parseMulDiv()
             expr = BinaryExpr(expr, op, right)
         }
@@ -441,165 +172,313 @@ class Parser(val tokens: List<Token>) {
 
     private fun parseMulDiv(): Expr {
         var expr = parseUnary()
-        while (peek()?.type == TokenTypes.MUL || peek()?.type == TokenTypes.DIV || peek()?.type == TokenTypes.MOD) {
-            val op = advance()!!.value
+
+        while (peek(skipNewLine = false)?.type == TokenTypes.MUL ||
+            peek(skipNewLine = false)?.type == TokenTypes.DIV ||
+            peek(skipNewLine = false)?.type == TokenTypes.MOD) {
+            val op = advance(skipNewLine = false)!!.value
             val right = parseUnary()
             expr = BinaryExpr(expr, op, right)
         }
         return expr
     }
 
-    private fun parsePostfixUnary(): Expr {
+    private fun parseUnary(): Expr {
+        val nextToken = peek()
+
+
+        return when (nextToken?.type) {
+            in PREFIXED_UNARY_TOKEN_TYPES -> {
+                val op = advance()!!.value
+                val right = parseUnary()
+                UnaryExpr(right, op, isPrefixed = true)
+            }
+            else -> parsePostfix()
+        }
+    }
+
+    private fun parsePostfix(): Expr {
         var expr = parsePrimary()
 
-        val postfixUnaryTokens = arrayOf(TokenTypes.INC, TokenTypes.DEC)
+        while (peek(skipNewLine = false)?.type in POSTFIXED_UNARY_TOKEN_TYPES) {
+            val op = advance(skipNewLine = false)!!.value
+            expr = UnaryExpr(expr, op, isPrefixed = false)
+        }
 
-        while (peek()?.type in postfixUnaryTokens) {
-            val op = advance()!!.value
-            expr = BinaryExpr(expr, op, Literal(""))
+        expr = parsePostfixSuffix(expr)
+
+        return expr
+    }
+
+    private fun parsePostfixSuffix(base: Expr): Expr {
+        var expr = base
+
+        while (true) {
+            when (peek(skipNewLine = false)?.type) {
+                TokenTypes.LBRACK -> {
+                    advance(skipNewLine = false)
+                    val index = parseExpr()
+                    expect(TokenTypes.RBRACK, skipNewLine = false)
+                    expr = IndexExpr(expr, listOf(index))
+                }
+                TokenTypes.LPAREN -> {
+                    advance(skipNewLine = true)
+                    val args = mutableListOf<Expr>()
+                    while (peek(skipNewLine = true)?.type != TokenTypes.RPAREN) {
+                        val next = peek(skipNewLine = true)
+                        val nextNext = peek(offset = 1, skipNewLine = true)
+                        if (next?.type == TokenTypes.IDENT && nextNext?.type == TokenTypes.EQ) {
+                            val name = advance(skipNewLine = true)!!.value
+                            advance(skipNewLine = true)
+                            val value = parseExpr()
+                            args.add(Arg(name, value))
+                        } else {
+                            args.add(parseExpr())
+                        }
+
+                        if (peek(skipNewLine = true)?.type == TokenTypes.COMMA) advance(skipNewLine = true)
+                    }
+                    expect(TokenTypes.RPAREN, skipNewLine = true)
+                    if (expr is VarRef) {
+                        expr = CallExpr(expr.name, args)
+                    } else {
+                        throw RuntimeException("Вызов функции возможен только от имени функции")
+                    }
+                }
+                else -> break
+            }
         }
 
         return expr
     }
 
-    private fun parseUnary(): Expr {
-        return when (peek()?.type) {
-            TokenTypes.NOT, TokenTypes.MINUS, TokenTypes.INC, TokenTypes.DEC, TokenTypes.LINK, TokenTypes.MUL -> {
-                val op = advance()!!.value
-                val right = parseUnary()
-                BinaryExpr(Literal(""), op, right)
-            }
-            else -> parsePostfixUnary()
-        }
-    }
-
-    private fun parseDimensions(): List<Expr?> {
-        val dimensions = mutableListOf<Expr?>()
-
-        while (peek()?.type == TokenTypes.LBRACK) {
-            advance()
-            dimensions += if (peek()?.type != TokenTypes.RBRACK) parseExpr()
-            else null
-            expect(TokenTypes.RBRACK)
-        }
-
-        return dimensions
-    }
-
-    private fun parseIdent(): Expr {
-        val token = peek(offset = -1)!!
-        val name = token.value
-        when (peek()?.type) {
-            TokenTypes.LPAREN -> {
-                advance()
-                val args = mutableListOf<Expr>()
-                while (peek()?.type != TokenTypes.RPAREN) {
-                    args.add(parseExpr())
-                    if (peek()?.type == TokenTypes.COMMA) advance()
-                }
-                expect(TokenTypes.RPAREN)
-                return CallExpr(name, args)
-            }
-            TokenTypes.EQ -> {
-                back()
-                return parseArg()
-            }
-            TokenTypes.LBRACK -> {
-                val dimensions = parseDimensions()
-                return IndexExpr(VarRef(token.value), dimensions)
-            }
-            else -> {
-                return VarRef(name)
-            }
-        }
-    }
-
     private fun parsePrimary(): Expr {
-        val token = advance()!!
+        val token = advance() ?: throw RuntimeException("Неожиданный конец файла")
 
         return when (token.type) {
             TokenTypes.NUMBER -> {
                 var num = token.value
-                if (peek()?.type == TokenTypes.DOT) {
-                    expect(TokenTypes.DOT)
-                    val part2 = expect(TokenTypes.NUMBER)!!
+                if (peek(skipNewLine = false)?.type == TokenTypes.DOT) {
+                    advance(skipNewLine = false)
+                    val part2 = expect(TokenTypes.NUMBER, skipNewLine = false)!!
                     num += '.' + part2.value
                 }
                 Literal(num)
             }
-            TokenTypes.LBRACE -> parseArray()
+            TokenTypes.LBRACE -> {
+                val values = mutableListOf<Expr>()
+                while (peek(skipNewLine = false)?.type != TokenTypes.RBRACE) {
+                    values.add(parseExpr())
+                    if (peek(skipNewLine = false)?.type == TokenTypes.COMMA) advance(skipNewLine = false)
+                }
+                expect(TokenTypes.RBRACE, skipNewLine = false)
+                ArrayExpr(values)
+            }
             TokenTypes.KW_TRUE -> Literal("1")
             TokenTypes.KW_FALSE -> Literal("0")
             TokenTypes.STRING -> Literal("\"${token.value}\"")
             TokenTypes.CHAR -> Literal("'${token.value}'")
-            TokenTypes.IDENT -> parseIdent()
+            TokenTypes.IDENT -> {
+                VarRef(token.value)
+            }
             TokenTypes.LPAREN -> {
                 val expr = parseExpr()
-                expect(TokenTypes.RPAREN)
+                expect(TokenTypes.RPAREN, skipNewLine = false)
                 expr
             }
             else -> throw RuntimeException("Неожиданный токен в выражении: $token")
         }
     }
 
-    private fun expect(type: TokenTypes, soft: Boolean = false): Token? {
-        val token = advance() ?: throw RuntimeException("Ожидался $type, но конец токенов")
-        if (token.type != type) {
-            if (!soft) throw RuntimeException("Ожидался $type, а встретилось ${token.type}")
-            else return null
+    private fun <T> parseInfix(stopAt: TokenTypes, builder: (Expr, String, Expr) -> T): Expr where T : Expr {
+        var left = when (stopAt) {
+            TokenTypes.OR -> parseAnd()
+            TokenTypes.AND -> parseComparison()
+            else -> throw RuntimeException("Неизвестный инфиксный оператор")
         }
-        return token
-    }
-
-    private fun expect(group: TokenGroups, soft: Boolean = false): Token? {
-        val token = advance() ?: throw RuntimeException("Ожидалась группа $group, но конец токенов")
-        if (token.group != group) {
-            if (!soft) throw RuntimeException("Ожидалась группа $group, а встретился ${token.type}")
-            else return null
-        }
-        return token
-    }
-
-    private fun expect(arrayTypes: Array<TokenTypes>, soft: Boolean = false): Token? {
-        val token = advance() ?: throw RuntimeException("Ожидалась группа $arrayTypes, но конец токенов")
-        if (token.type !in arrayTypes) {
-            if (!soft) throw RuntimeException("Ожидалась группа $arrayTypes, а встретился ${token.type}")
-            else return null
-        }
-        return token
-    }
-
-    // Фигня прочая
-    private fun parsePreProc(): PreProcDecl {
-        val token = expect(TokenGroups.PREPROC)
-
-        when (token!!.type) {
-            TokenTypes.PP_INCLUDE -> {
-                var token = peek()!!
-                if (token.type == TokenTypes.STRING) {
-                    token = expect(TokenTypes.STRING)!!
-                    var path = token.value
-                    val isLeftScript: Boolean = path.startsWith("@")
-
-                    if (isLeftScript) path = path.drop(1)
-
-                    return PreProcDecl(data = path, directive = Include(path = path, isLeftScript, false))
-                } else {
-                    expect(TokenTypes.LT)
-                    val includeNameToken = expect(TokenTypes.IDENT)!!
-                    val path = if (expect(TokenTypes.DOT, true) != null) {
-                        val includeExtToken = expect(TokenTypes.IDENT)
-                            ?: throw RuntimeException("Expected file extension after dot")
-                        "${includeNameToken.value}.${includeExtToken.value}"
-                    } else {
-                        back()
-                        includeNameToken.value
-                    }
-                    expect(TokenTypes.GT)
-                    return PreProcDecl(data = path, directive = Include(path = path, false, true))
-                }
+        
+        while (peek(skipNewLine = false)?.type == stopAt) {
+            val op = advance(skipNewLine = false)!!.value
+            val right = when (stopAt) {
+                TokenTypes.OR -> parseAnd()
+                TokenTypes.AND -> parseComparison()
+                else -> throw RuntimeException("Неизвестный инфиксный оператор")
             }
-            else -> throw RuntimeException("Принят необрабатываемый тип токена")
+            left = builder(left, op, right)
+        }
+        return left
+    }
+
+    fun parseBlock(ownScopeStack: Boolean = true): Block {
+        expect(TokenTypes.LBRACE)
+        val stmts = mutableListOf<Node>()
+        while (peek()?.type != TokenTypes.RBRACE && !isEOF()) {
+            val stmt = parseStatement()
+            if (stmt != null) {
+                stmts.add(stmt)
+            }
+        }
+        expect(TokenTypes.RBRACE)
+        return Block(stmts, ownScopeStack)
+    }
+
+    fun parseDimensions(): List<Expr?> {
+        val dimensions = mutableListOf<Expr?>()
+        while (peek()?.type == TokenTypes.LBRACK) {
+            advance()
+            dimensions += if (peek()?.type != TokenTypes.RBRACK) parseExpr()
+            else null
+            expect(TokenTypes.RBRACK)
+        }
+        return dimensions
+    }
+
+    fun parseParams(stopToken: TokenTypes = TokenTypes.RPAREN, defaultType: TokenTypes? = null, defaultValue: Literal? = null): List<Param> {
+        val params = mutableListOf<Param>()
+
+        while (peek()?.type != stopToken) {
+            val pname = expect(TokenTypes.IDENT)!!.value
+
+            var ptype: String = TypeToStr[TokenTypes.KW_I32_FAST]!!
+            val dimensions = mutableListOf<Expr?>()
+
+            if (peek()?.type == TokenTypes.COL) {
+                advance()
+                val ptypeToken = expect(TokenGroups.VARTYPE)
+                if (ptypeToken != null && ptypeToken.type in TypeToStr) {
+                    ptype = TypeToStr[ptypeToken.type]!!
+                } else {
+                    throw RuntimeException("Неизвестный тип параметра: ${ptypeToken?.value}")
+                }
+                dimensions += parseDimensions()
+            } else if (defaultType != null) {
+                if (defaultType in TypeToStr) {
+                    ptype = TypeToStr[defaultType]!!
+                } else {
+                    throw RuntimeException("Неизвестный дефолтный тип параметра: $defaultType")
+                }
+                dimensions += parseDimensions()
+            }
+
+            var paramDefault: Literal? = defaultValue
+            if (peek()?.type == TokenTypes.EQ) {
+                advance()
+                val expr = parseExpr()
+                if (expr !is Literal) {
+                    throw RuntimeException("Значение по умолчанию должно быть литералом")
+                }
+                paramDefault = expr
+            }
+
+            if (peek()?.type == TokenTypes.COMMA) advance()
+
+            params.add(Param(pname, ptype, paramDefault, dimensions))
+        }
+
+        return params
+    }
+
+
+    fun parseRange(): Range {
+        val ranges = mutableListOf<SingleRange>()
+
+        ranges += parseSingleRange()
+
+        while (peek()?.type == TokenTypes.PLUS) {
+            advance()
+            ranges += parseSingleRange()
+        }
+
+        return Range(ranges)
+    }
+
+    fun parseSingleRange(): List<SingleRange> {
+        return when (peek()?.type) {
+            TokenTypes.LBRACE -> {
+                advance()
+                val values = mutableListOf<Expr>()
+
+                while (peek()?.type != TokenTypes.RBRACE) {
+                    val expr = parseExpr()
+                    values.add(expr)
+
+                    if (peek()?.type == TokenTypes.SEMI) {
+                        advance()
+                    } else if (peek()?.type != TokenTypes.RBRACE) {
+                        throw RuntimeException("Ожидается ; или } в перечислении значений")
+                    }
+                }
+
+                expect(TokenTypes.RBRACE)
+
+                val singleRanges = mutableListOf<SingleRange>()
+
+                for (value in values) {
+                    singleRanges += SingleRange(
+                        start = value,
+                        startIsStrong = true,
+                        end = null,
+                        endIsStrong = false,
+                        onlyStart = true
+                    )
+                }
+
+                singleRanges
+            }
+
+            TokenTypes.LBRACK, TokenTypes.LPAREN -> {
+                val startBracket = advance()!!.type
+                val startIsStrong = startBracket == TokenTypes.LPAREN
+
+                val start: Expr?
+                val startToken = peek()
+
+                if (startToken?.type == TokenTypes.MINUS) {
+                    val nextToken = peek(offset = 1)
+                    if (nextToken?.type == TokenTypes.SEMI) {
+                        advance()
+                        start = null
+                    } else {
+                        start = parseExpr()
+                    }
+                } else if (startToken?.type == TokenTypes.SEMI) {
+                    start = null
+                } else {
+                    start = parseExpr()
+                }
+
+                expect(TokenTypes.SEMI)
+
+                val end: Expr?
+                val endToken = peek()
+
+                if (endToken?.type == TokenTypes.PLUS) {
+                    val nextToken = peek(offset = 1)
+                    if (nextToken?.type == TokenTypes.RBRACK || nextToken?.type == TokenTypes.RPAREN) {
+                        advance()
+                        end = null
+                    } else {
+                        end = parseExpr()
+                    }
+                } else if (endToken?.type == TokenTypes.RBRACK || endToken?.type == TokenTypes.RPAREN) {
+                    end = null
+                } else {
+                    end = parseExpr()
+                }
+
+                val endBracket = expect(arrayOf(TokenTypes.RBRACK, TokenTypes.RPAREN))!!.type
+                val endIsStrong = endBracket == TokenTypes.RPAREN
+
+                listOf(SingleRange(
+                    start = start,
+                    startIsStrong = startIsStrong,
+                    end = end,
+                    endIsStrong = endIsStrong,
+                    onlyStart = false
+                ))
+            }
+
+            else -> throw RuntimeException("Ожидается диапазон: {value}, [a;b], (a;b) или подобное")
         }
     }
 }

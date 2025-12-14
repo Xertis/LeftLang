@@ -1,5 +1,6 @@
 package generator
 
+import StrToType
 import TokenTypes
 import parser.Arg
 import parser.ArrayExpr
@@ -19,11 +20,12 @@ import parser.Literal
 import parser.LogicDecl
 import parser.LoopDecl
 import parser.Node
-import parser.PreProcDecl
 import parser.Program
 import parser.Range
 import parser.RepeatUntilDecl
 import parser.Return
+import parser.SingleRange
+import parser.UnaryExpr
 import parser.VarBinaryExpr
 import parser.VarDecl
 import parser.VarLink
@@ -32,8 +34,12 @@ import parser.WhenDecl
 import parser.WhileDecl
 
 class Generator(val program: Program) {
-    private fun isUnsigned(type: TokenTypes): Boolean? {
-        return when (type) {
+    private fun isUnsigned(type: String): Boolean? {
+        if (type !in StrToType) {
+            return null
+        }
+
+        return when (StrToType[type]) {
             TokenTypes.KW_CHAR_UNSIGNED, TokenTypes.KW_SHORT_UNSIGNED, TokenTypes.KW_INT_UNSIGNED,
             TokenTypes.KW_LONG_UNSIGNED, TokenTypes.KW_HEAVY_UNSIGNED -> true
 
@@ -44,8 +50,11 @@ class Generator(val program: Program) {
         }
     }
 
-    private fun left2Ctype(type: TokenTypes): String {
-        return when(type) {
+    private fun left2Ctype(type: String): String {
+        if (type !in StrToType) {
+            return type
+        }
+        return when(StrToType[type]) {
             TokenTypes.KW_CHAR, TokenTypes.KW_CHAR_UNSIGNED -> "char"
             TokenTypes.KW_SHORT, TokenTypes.KW_SHORT_UNSIGNED -> "short"
             TokenTypes.KW_INT, TokenTypes.KW_INT_UNSIGNED -> "int"
@@ -93,6 +102,7 @@ class Generator(val program: Program) {
 
     private fun genFunc(decl: FunDecl, root: List<Node>): String {
         val params = mutableListOf<String>()
+
         for (param in decl.params) {
             val isUnsigned = isUnsigned(param.type)
             val sign = when (isUnsigned) {
@@ -100,15 +110,22 @@ class Generator(val program: Program) {
                 false -> "signed"
                 null -> ""
             }
-            params += "$sign ${left2Ctype(param.type)} ${param.name}${genDimensions(param.dimensions, root)}"
+
+            val base =
+                "$sign ${left2Ctype(param.type)} ${param.name}${genDimensions(param.dimensions, root)}"
+
+            val paramWithDefault =
+                if (param.defaultValue != null) "$base = ${gen(param.defaultValue, root)}"
+                else base
+
+            params += paramWithDefault
         }
+
         val body = gen(decl.body, root)
-        val pointers = "*".repeat(decl.returnPointerCount)
-        return "${left2Ctype(decl.returnType)}$pointers ${decl.name}${params.joinToString(
-            separator = ",",
-            prefix = "(",
-            postfix = ")"
-        )} {\n$body\n}\n"
+
+        return "${left2Ctype(decl.returnType)} ${decl.name}" +
+                params.joinToString(", ", "(", ")") +
+                " {\n$body\n}\n"
     }
 
     private fun genElse(decl: Block, root: List<Node>): String {
@@ -162,12 +179,128 @@ class Generator(val program: Program) {
     }
 
     private fun genFor(decl: ForDecl, root: List<Node>): String {
-        val init = gen(decl.init, root)
-        val range = gen(decl.range, root)
-        val step = gen(decl.step, root)
+        // Писал не я и я его боюсь
+        val params = decl.params
         val body = gen(decl.body, root)
-        return "for ($init; $range; ${decl.init.name} += ($step)) {\n$body}\n"
+        val stepExprStr = gen(decl.step, root)
+
+        if (decl.range is ArrayExpr) {
+            val arr = decl.range
+            val tmpArrName = "__for_vals_${params.first().name}"
+            val arrValuesStr = genArray(arr, root) // "{...}"
+            val code = StringBuilder()
+
+            // создаём временный массив значений
+            val firstParamType = params.first().type
+            val isUnsigned = isUnsigned(firstParamType)
+            val sign = when (isUnsigned) {
+                true -> "unsigned"
+                false -> "signed"
+                null -> ""
+            }
+            val ctype = left2Ctype(firstParamType)
+            code.append("$sign $ctype $tmpArrName[] = $arrValuesStr;\n")
+
+            // массив размеров (для каждого параметра один и тот же размер)
+            val sizesList = (0 until params.size).joinToString(", ") { "sizeof($tmpArrName)/sizeof($tmpArrName[0])" }
+            code.append("size_t __sizes_${tmpArrName}[] = { $sizesList };\n")
+
+            // вычисляем общее количество комбинаций (произведение размеров)
+            code.append("size_t __total_${tmpArrName} = 1;\n")
+            code.append("for (size_t __j = 0; __j < sizeof(__sizes_${tmpArrName})/sizeof(__sizes_${tmpArrName}[0]); ++__j) __total_${tmpArrName} *= __sizes_${tmpArrName}[__j];\n")
+
+            // один цикл по линейному индексу
+            code.append("for (size_t __idx = 0; __idx < __total_${tmpArrName}; ++__idx) {\n")
+            code.append("    size_t __tmp = __idx;\n")
+
+            // для каждого параметра вычисляем свою координату (mod/div) и объявляем переменную
+            for ((k, param) in params.withIndex()) {
+                code.append("    size_t __i$k = __tmp % __sizes_${tmpArrName}[$k]; __tmp /= __sizes_${tmpArrName}[$k];\n")
+                val pIsUnsigned = isUnsigned(param.type)
+                val pSign = when (pIsUnsigned) {
+                    true -> "unsigned"
+                    false -> "signed"
+                    null -> ""
+                }
+                val pCtype = left2Ctype(param.type)
+                code.append("    $pSign $pCtype ${param.name} = $tmpArrName[__i$k];\n")
+            }
+
+            // тело
+            code.append("    $body")
+            code.append("}\n")
+
+            return code.toString()
+        }
+
+        if (decl.range is Range || decl.range is SingleRange) {
+            val rangeExpr = decl.range
+            val code = StringBuilder()
+
+            for ((level, param) in params.withIndex()) {
+                val initVal = when {
+                    param.defaultValue != null -> gen(param.defaultValue, root)
+                    rangeExpr is SingleRange && rangeExpr.start != null -> gen(rangeExpr.start, root)
+                    rangeExpr is Range && rangeExpr.ranges.isNotEmpty() && rangeExpr.ranges[0].start != null -> gen(rangeExpr.ranges[0].start!!, root)
+                    else -> "0"
+                }
+
+                val pIsUnsigned = isUnsigned(param.type)
+                val pSign = when (pIsUnsigned) {
+                    true -> "unsigned"
+                    false -> "signed"
+                    null -> ""
+                }
+                val pCtype = left2Ctype(param.type)
+
+                val cond = if (rangeExpr is Range) genRange(rangeExpr, root, param.name)
+                else if (rangeExpr is SingleRange) genSingleRange(rangeExpr, root, param.name)
+                else "1"
+
+                code.append("for ($pSign $pCtype ${param.name} = $initVal; $cond; ${param.name} += $stepExprStr) {\n")
+            }
+
+            code.append(body)
+            for (i in params.indices.reversed()) code.append("}\n")
+            return code.toString()
+        }
+
+        // --- FALLBACK: range — произвольное выражение: делаем временный массив из одного элемента и применяем ту же линейную логику ---
+        val fallbackTmp = "__for_vals_${params.first().name}_fallback"
+        val firstParamTypeF = params.first().type
+        val isUnsignedF = isUnsigned(firstParamTypeF)
+        val signF = when (isUnsignedF) {
+            true -> "unsigned"
+            false -> "signed"
+            null -> ""
+        }
+        val ctypeF = left2Ctype(firstParamTypeF)
+        val fallbackCode = StringBuilder()
+        fallbackCode.append("$signF $ctypeF $fallbackTmp[] = { ${gen(decl.range, root)} };\n")
+        val sizesListF = (0 until params.size).joinToString(", ") { "sizeof($fallbackTmp)/sizeof($fallbackTmp[0])" }
+        fallbackCode.append("size_t __sizes_$fallbackTmp[] = { $sizesListF };\n")
+        fallbackCode.append("size_t __total_$fallbackTmp = 1;\n")
+        fallbackCode.append("for (size_t __j = 0; __j < sizeof(__sizes_$fallbackTmp)/sizeof(__sizes_$fallbackTmp[0]); ++__j) __total_$fallbackTmp *= __sizes_$fallbackTmp[__j];\n")
+        fallbackCode.append("for (size_t __idx = 0; __idx < __total_$fallbackTmp; ++__idx) {\n")
+        fallbackCode.append("    size_t __tmp = __idx;\n")
+
+        for ((k, param) in params.withIndex()) {
+            fallbackCode.append("    size_t __i$k = __tmp % __sizes_$fallbackTmp[$k]; __tmp /= __sizes_$fallbackTmp[$k];\n")
+            val pIsUnsigned = isUnsigned(param.type)
+            val pSign = when (pIsUnsigned) {
+                true -> "unsigned"
+                false -> "signed"
+                null -> ""
+            }
+            val pCtype = left2Ctype(param.type)
+            fallbackCode.append("    $pSign $pCtype ${param.name} = $fallbackTmp[__i$k];\n")
+        }
+
+        fallbackCode.append("    $body")
+        fallbackCode.append("}\n")
+        return fallbackCode.toString()
     }
+
 
     private fun genLoop(decl: LoopDecl, root: List<Node>): String {
         return "for (;;) {\n${gen(decl.body, root)}}"
@@ -207,10 +340,9 @@ class Generator(val program: Program) {
 
         val dimensions = genDimensions(decl.dimensions, root)
 
-        val point = if (decl.isPointer) '*' else ' '
 
-        if (!decl.isNull) return "$sign ${left2Ctype(decl.type)} $point${decl.name}$dimensions = ${gen(decl.value!!, root)}"
-        return "$sign ${left2Ctype(decl.type)} $point${decl.name}$dimensions"
+        if (!decl.isNull) return "$sign ${left2Ctype(decl.type)} ${decl.name}$dimensions = ${gen(decl.value!!, root)}"
+        return "$sign ${left2Ctype(decl.type)} ${decl.name}$dimensions"
     }
 
     private fun genConst(decl: ConstDecl, root: List<Node>): String {
@@ -224,52 +356,16 @@ class Generator(val program: Program) {
     }
 
     private fun genCall(decl: CallExpr, root: List<Node>): String {
-        val funDecl = findFunDecl(decl.name, root) ?: findFunDecl(decl.name, program.decls)
-
-        if (funDecl == null) {
-            val argsStr = decl.args.joinToString(
-                separator = ", ",
-                prefix = "(",
-                postfix = ")"
-            ) { gen(it, root) }
-            return "${decl.name}$argsStr"
-        }
-
-        val namedArgs = mutableMapOf<String, Expr>()
-        val notNamedArgs = mutableListOf<Expr>()
-
-        for (arg in decl.args) {
-            when (arg) {
-                is Arg -> namedArgs[arg.name] = arg.value
-                else -> notNamedArgs += arg
-            }
-        }
-
-        val finalArgs = mutableListOf<Expr>()
-        var posIndex = 0
-
-        for (param in funDecl.params) {
-            finalArgs += when {
-                posIndex < notNamedArgs.size -> notNamedArgs[posIndex++]
-                namedArgs.containsKey(param.name) -> namedArgs[param.name]!!
-                param.defaultValue != null -> param.defaultValue
-                else -> throw RuntimeException("Передано неверное кол-во аргументов")
-            }
-        }
-
-        val argsStr = finalArgs.joinToString(
+        val argsStr = decl.args.joinToString(
             separator = ", ",
             prefix = "(",
             postfix = ")"
         ) { gen(it, root) }
-
         return "${decl.name}$argsStr"
     }
 
     private fun genInclude(decl: Include, root: List<Node>): String {
-        val prefix = if (decl.isStd) '<' else '"'
-        val postfix = if (decl.isStd) '>' else '"'
-        return "include $prefix${decl.path}$postfix\n"
+        return "#include \"${decl.path}\"\n"
     }
 
     private fun genArray(decl: ArrayExpr, root: List<Node>): String {
@@ -282,12 +378,34 @@ class Generator(val program: Program) {
         return "$array}"
     }
 
-    private fun genRange(decl: Range, root: List<Node>): String {
-        val name = decl.name ?: "0"
-        val start = gen(decl.start, root)
-        val end = gen(decl.end, root)
+    private fun genSingleRange(singleRange: SingleRange, root: List<Node>, name: String="0"): String {
+        val start = if (singleRange.start != null) gen(singleRange.start, root) else null
+        val end = if (singleRange.end != null) gen(singleRange.end, root) else null
 
-        return "($name >= $start && $name <= $end)"
+        val startOp = if (singleRange.startIsStrong) ">" else ">="
+        val endOp = if (singleRange.endIsStrong) "<" else "<="
+
+        return when {
+            singleRange.onlyStart -> "($name == $start)"
+            start == null && end != null -> "($name $endOp $end)"
+            start != null && end == null -> "($name $startOp $start)"
+            start != null && end != null -> "($name $startOp $start && $name $endOp $end)"
+            else -> "(1)"
+        }
+    }
+
+    private fun genRange(decl: Range, root: List<Node>, name: String="0"): String {
+        if (decl.ranges.isEmpty()) {
+            return "false"
+        }
+
+        val conditions = decl.ranges.map { genSingleRange(it, root, name) }
+
+        return if (conditions.size == 1) {
+            conditions[0]
+        } else {
+            conditions.joinToString(separator = " || ", prefix = "(", postfix = ")")
+        }
     }
 
     private fun genAssign(decl: Assign, root: List<Node>): String {
@@ -303,8 +421,7 @@ class Generator(val program: Program) {
             is BinaryExpr -> "(${gen(decl.left, root)} ${decl.op} ${gen(decl.right, root)})"
             is CallExpr -> genCall(decl, root)
             is Include -> genInclude(decl, root)
-            is Literal -> "${decl.value}"
-            is PreProcDecl -> "#" + gen(decl.directive, root) + "\n"
+            is Literal -> decl.value
             is VarRef -> decl.name
             is FunDecl -> genFunc(decl, root)
             is Program -> throw RuntimeException("не реализован $decl")
@@ -318,12 +435,16 @@ class Generator(val program: Program) {
             is WhileDecl -> genWhile(decl, root)
             is ForDecl -> genFor(decl, root)
             is Range -> genRange(decl, root)
+            is SingleRange -> genSingleRange(decl, root)
             is Break -> "break;"
             is Continue -> "continue;"
             is RepeatUntilDecl -> genRepeatUntil(decl, root)
             is ArrayExpr -> genArray(decl, root)
             is IndexExpr -> "${gen(decl.array, root)}${genDimensions(decl.dimensions, root)}"
             is LoopDecl -> genLoop(decl, root)
+            is UnaryExpr -> if (decl.isPrefixed) "${decl.op}${gen(decl.value, root)}"
+                            else "${gen(decl.value, root)}${decl.op}"
+            else -> throw RuntimeException("Неизвестная декларация для генератора: $decl")
         }
     }
 

@@ -44,6 +44,7 @@ fun bindCommands(console: Console) {
             logger.info("Translating finished. Result:\n$res", 2)
         } catch (e: Exception) {
             logger.fatal("Left fatal error: ${e.message}")
+            e.printStackTrace()
             return false
         }
 

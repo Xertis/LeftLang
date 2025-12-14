@@ -1,4 +1,3 @@
-import console.Command
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -72,7 +71,7 @@ class LeftTests {
         for (i in 1..10) {
             val status = runCode(
                 """
-                #include <stdio.h>
+                include "stdio.h"
                 fun main() {
                     var x: Int = $i
                     when (x) {
@@ -97,7 +96,7 @@ class LeftTests {
         println("run test arrayTest")
 
         val res1 = runCode("""
-            #include <stdio.h>
+            include "stdio.h"
             fun main() {
                 val x: int[1] = ?
                 val y: int[2][1] = ?
@@ -123,7 +122,7 @@ class LeftTests {
         assertEquals(null, res2)
 
         val res3 = runCode("""
-            #include <stdio.h>
+            include "stdio.h"
             fun sum(rows: int, cols: int, arr: int[rows][cols]) -> int {
                 var sum: int = 0
                 
@@ -153,7 +152,7 @@ class LeftTests {
         println("run test loopTest")
 
         val res1 = runCode("""
-                #include <stdio.h>
+                include "stdio.h"
                 
                 fun main() {
                     var x: int = 0
@@ -174,7 +173,7 @@ class LeftTests {
         assertEquals("11", res1)
 
         val res2 = runCode("""
-                #include <stdio.h>
+                include "stdio.h"
                 
                 fun main() {
                     val x: int = 0

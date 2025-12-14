@@ -6,13 +6,12 @@ sealed class Node
 
 // --- верхний уровень ---
 data class Program(var decls: List<Node>) : Node()
-data class ConstDecl(val name: String, val type: TokenTypes, val value: Expr) : Node()
+data class ConstDecl(val name: String, val type: String, val value: Expr) : Node()
 data class FunDecl(
     val name: String,
-    val returnType: TokenTypes,
+    val returnType: String,
     val params: List<Param>,
     val body: Block,
-    val returnPointerCount: Int=0,
 ) : Node()
 
 data class LogicDecl(
@@ -43,23 +42,22 @@ data class RepeatUntilDecl(
 ) : Node()
 
 data class ForDecl(
-    val init: VarDecl,
+    val params: List<Param>,
     val range: Expr,
     val step: Expr,
     val body: Block
 ) : Node()
 
-data class Param(val name: String, val type: TokenTypes, val defaultValue: Expr?=null, val dimensions: List<Expr?> = emptyList())
+data class Param(val name: String, val type: String, val defaultValue: Expr?=null, val dimensions: List<Expr?> = emptyList()): Node()
 data class Arg(val name: String, val value: Expr): Expr()
 
 // --- операторы ---
 data class VarDecl(
     val mutable: Boolean,
     val name: String,
-    val type: TokenTypes,
+    val type: String,
     val value: Expr?=null,
     val isNull: Boolean=false,
-    val isPointer: Boolean=false,
     val dimensions: List<Expr?> = emptyList()
 ) : Node()
 
@@ -70,17 +68,29 @@ data class Block(var statements: List<Node>, val ownScopeStack: Boolean=true) : 
 
 // --- выражения ---
 sealed class Expr : Node()
-data class Literal(val value: Any) : Expr()
+data class Literal(val value: String) : Expr()
 data class VarRef(val name: String) : Expr()
 data class VarLink(val ref: VarRef): Expr()
 data class ArrayExpr(val values: List<Expr> = emptyList()) : Expr()
 data class BinaryExpr(val left: Expr, val op: String, val right: Expr) : Expr()
+data class UnaryExpr(val value: Expr, val op: String, val isPrefixed: Boolean=true) : Expr()
 data class CallExpr(val name: String, val args: List<Expr>) : Expr()
-data class Range(val start: Expr, val end: Expr, var name: String?) : Expr()
+
+data class SingleRange(
+    val start: Expr?=null,
+    val startIsStrong: Boolean = false,
+
+    val end: Expr?=null,
+    val endIsStrong: Boolean = false,
+
+    val onlyStart: Boolean = false
+) : Expr()
+data class Range(
+    val ranges: List<SingleRange> = emptyList()
+) : Expr()
 data class IndexExpr(val array: Expr, val dimensions: List<Expr?>) : Expr()
 class Break() : Expr()
 class Continue() : Expr()
 
 // --- системное ---
-data class Include(val path: String, val isLeftScript: Boolean, val isStd: Boolean): Expr()
-data class PreProcDecl(val data: String, val directive: Expr) : Expr()
+data class Include(val path: String, val isLeft: Boolean=false) : Node()

@@ -59,10 +59,10 @@ object Manager {
                         "l" -> {
                             logger.info("The \"${file.name}\" file is being translated...", 2)
 
-                            val C99Code = translate(file.readText())
-                            val newTargetFile = File(targetFile.parent, "${file.nameWithoutExtension}.c")
+                            val CCode = translate(file.readText())
+                            val newTargetFile = File(targetFile.parent, "${file.nameWithoutExtension}.cpp")
 
-                            newTargetFile.writeText(C99Code)
+                            newTargetFile.writeText(CCode)
                         }
                         else -> {
                             file.copyTo(targetFile, overwrite = true)

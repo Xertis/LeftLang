@@ -26,7 +26,7 @@ enum class TokenTypes {
     AND, OR, NOT,
     LPAREN, RPAREN, LBRACE, RBRACE, LBRACK, RBRACK, COMMA, SEMI, COL, DOT, RANGE, //(){}[],;:. ..
     ARROW,
-    NEW_LINE, PP_INCLUDE, EOF
+    NEW_LINE, INCLUDE, EOF
 
 }
 
@@ -87,7 +87,21 @@ val VALID_VARTYPE_GROUP_TOKEN_TYPES = arrayOf(
 )
 
 val VALID_PREPROC_GROUP_TOKEN_TYPES = arrayOf(
-    TokenTypes.PP_INCLUDE
+    TokenTypes.INCLUDE
+)
+
+val PREFIXED_UNARY_TOKEN_TYPES = arrayOf(
+    TokenTypes.INC, TokenTypes.DEC, TokenTypes.NOT,
+    TokenTypes.MINUS, TokenTypes.LINK
+)
+
+val POSTFIXED_UNARY_TOKEN_TYPES = arrayOf(
+    TokenTypes.INC, TokenTypes.DEC
+)
+
+val OPEQ_TOKEN_TYPES = arrayOf(
+    TokenTypes.PLUSEQ, TokenTypes.MINUSEQ,
+    TokenTypes.MULEQ, TokenTypes.DIVEQ, TokenTypes.MODEQ
 )
 
 enum class TokenGroups {
@@ -97,3 +111,87 @@ enum class TokenGroups {
 enum class TokenizerStates {
     DEFAULT, IN_IDENT, IN_NUMBER, IN_STRING, IN_OPERATOR, IN_DELIMETER, IN_PREPROC
 }
+
+val StrToType = hashMapOf(
+    "char" to TokenTypes.KW_CHAR,
+    "Char" to TokenTypes.KW_CHAR_UNSIGNED,
+    "short" to TokenTypes.KW_SHORT,
+    "Short" to TokenTypes.KW_SHORT_UNSIGNED,
+    "int" to TokenTypes.KW_INT,
+    "Int" to TokenTypes.KW_INT_UNSIGNED,
+    "long" to TokenTypes.KW_LONG,
+    "Long" to TokenTypes.KW_LONG_UNSIGNED,
+    "heavy" to TokenTypes.KW_HEAVY,
+    "Heavy" to TokenTypes.KW_HEAVY_UNSIGNED,
+
+    "u8" to TokenTypes.KW_U8,
+    "u16" to TokenTypes.KW_U16,
+    "u32" to TokenTypes.KW_U32,
+    "u64" to TokenTypes.KW_U64,
+    "umax" to TokenTypes.KW_UMAX,
+
+    "i8" to TokenTypes.KW_I8,
+    "i16" to TokenTypes.KW_I16,
+    "i32" to TokenTypes.KW_I32,
+    "i64" to TokenTypes.KW_I64,
+    "imax" to TokenTypes.KW_IMAX,
+
+    "FastU8" to TokenTypes.KW_U8_FAST,
+    "FastU16" to TokenTypes.KW_U16_FAST,
+    "FastU32" to TokenTypes.KW_U32_FAST,
+    "FastU64" to TokenTypes.KW_U64_FAST,
+
+    "FastI8" to TokenTypes.KW_I8_FAST,
+    "FastI16" to TokenTypes.KW_I16_FAST,
+    "FastI32" to TokenTypes.KW_I32_FAST,
+    "FastI64" to TokenTypes.KW_I64_FAST,
+
+    "f32" to TokenTypes.KW_F32,
+    "f64" to TokenTypes.KW_F64,
+
+    "String" to TokenTypes.KW_STRING,
+    "Bool" to TokenTypes.KW_BOOL,
+    "Void" to TokenTypes.KW_VOID
+)
+
+val TypeToStr = hashMapOf(
+    TokenTypes.KW_CHAR to "char",
+    TokenTypes.KW_CHAR_UNSIGNED to "Char",
+    TokenTypes.KW_SHORT to "short",
+    TokenTypes.KW_SHORT_UNSIGNED to "Short",
+    TokenTypes.KW_INT to "int",
+    TokenTypes.KW_INT_UNSIGNED to "Int",
+    TokenTypes.KW_LONG to "long",
+    TokenTypes.KW_LONG_UNSIGNED to "Long",
+    TokenTypes.KW_HEAVY to "heavy",
+    TokenTypes.KW_HEAVY_UNSIGNED to "Heavy",
+
+    TokenTypes.KW_U8 to "u8",
+    TokenTypes.KW_U16 to "u16",
+    TokenTypes.KW_U32 to "u32",
+    TokenTypes.KW_U64 to "u64",
+    TokenTypes.KW_UMAX to "umax",
+
+    TokenTypes.KW_I8 to "i8",
+    TokenTypes.KW_I16 to "i16",
+    TokenTypes.KW_I32 to "i32",
+    TokenTypes.KW_I64 to "i64",
+    TokenTypes.KW_IMAX to "imax",
+
+    TokenTypes.KW_U8_FAST to "FastU8",
+    TokenTypes.KW_U16_FAST to "FastU16",
+    TokenTypes.KW_U32_FAST to "FastU32",
+    TokenTypes.KW_U64_FAST to "FastU64",
+
+    TokenTypes.KW_I8_FAST to "FastI8",
+    TokenTypes.KW_I16_FAST to "FastI16",
+    TokenTypes.KW_I32_FAST to "FastI32",
+    TokenTypes.KW_I64_FAST to "FastI64",
+
+    TokenTypes.KW_F32 to "f32",
+    TokenTypes.KW_F64 to "f64",
+
+    TokenTypes.KW_STRING to "String",
+    TokenTypes.KW_BOOL to "Bool",
+    TokenTypes.KW_VOID to "Void"
+)

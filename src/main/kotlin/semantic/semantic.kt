@@ -1,6 +1,7 @@
 package semantic
 
 import STDINT_VARTYPE_GROUP
+import StrToType
 import parser.Assign
 import parser.Block
 import parser.CallExpr
@@ -10,7 +11,8 @@ import parser.Include
 import parser.LogicDecl
 import parser.LoopDecl
 import parser.Node
-import parser.PreProcDecl
+import parser.Expr
+import parser.Param
 import parser.Program
 import parser.RepeatUntilDecl
 import parser.VarBinaryExpr
@@ -19,13 +21,20 @@ import parser.VarLink
 import parser.WhenDecl
 import parser.WhileDecl
 
-data class MiddleWare(val func: (Node, MutableList<Node>, Semantic) -> Unit) {
+data class MiddleWare(
+    val nodeFunc: (Node, MutableList<Node>, Semantic) -> Unit,
+    val exprFunc: (Expr, MutableList<Node>, Semantic) -> Unit
+    ) {
     val nodes = mutableListOf<Node>()
     val backups = mutableListOf(nodes)
     var level = 0
 
     fun run(decl: Node, semantic: Semantic) {
-        func(decl, nodes, semantic)
+        nodeFunc(decl, nodes, semantic)
+    }
+
+    fun run(decl: Expr, semantic: Semantic) {
+        exprFunc(decl, nodes, semantic)
     }
 
     fun clear() {
@@ -62,7 +71,14 @@ object Semantic {
     }
 
     fun addMiddleware(middleware: (Node, MutableList<Node>, Semantic) -> Unit) {
-        middlewares += MiddleWare(middleware)
+        middlewares += MiddleWare(middleware, fun (e: Expr, n: MutableList<Node>, s: Semantic) {})
+    }
+
+    fun addMiddleware(
+        nodeMidl: (Node, MutableList<Node>, Semantic) -> Unit,
+        exprMidl: (Expr, MutableList<Node>, Semantic) -> Unit,
+        ) {
+        middlewares += MiddleWare(nodeMidl, exprMidl)
     }
 
     fun addEndHandler(handler: (HashMap<String, Int>, MutableList<Node>, Semantic) -> MutableList<Node>) {
@@ -94,6 +110,18 @@ object Semantic {
     private fun clearMiddlewares() {
         for (ware in middlewares) {
             ware.clear()
+        }
+    }
+
+    private fun processExpr(decls: List<Expr>) {
+        for (decl in decls) {
+            runMiddlewares(decl)
+            when (decl) {
+                is CallExpr -> {
+                    process(decl.args)
+                }
+                else -> {}
+            }
         }
     }
 
@@ -146,7 +174,7 @@ object Semantic {
                 }
                 is ForDecl -> {
                     saveMiddlewares()
-                    process(listOf(decl.init))
+                    process(decl.params)
                     process(decl.body.statements)
                     backUpMiddlewares()
                 }
@@ -220,23 +248,27 @@ fun bindMiddleWares(semantic: Semantic) {
     }
 
     semantic.addMiddleware { decl, nodes, semantic ->
-        if (decl is VarDecl && decl.type in STDINT_VARTYPE_GROUP) {
+        var isStdInt = false
+        if (decl is VarDecl&& decl.type in StrToType) {
+            isStdInt = StrToType[decl.type] in STDINT_VARTYPE_GROUP
+        } else if (decl is Param && decl.type in StrToType) {
+            isStdInt = StrToType[decl.type] in STDINT_VARTYPE_GROUP
+        }
+
+        if (isStdInt) {
             semantic.setFlag("exact-width-variable", 1)
-        } else if (decl is PreProcDecl && decl.directive is Include && decl.directive.path == "stdint.h") {
+        } else if (decl is Include && decl.path == "stdint.h") {
             semantic.setFlag("has-stdint-include", 1)
         }
     }
 
     semantic.addEndHandler { flags, nodes, semantic ->
         if (flags["exact-width-variable"] == 1 && flags["has-stdint-include"] == null) {
-            nodes.add(0, PreProcDecl(
-                data = "stdint.h",
-                directive = Include(
-                    isStd = true,
-                    isLeftScript = false,
+            nodes.add(0, Include(
+                    isLeft = false,
                     path = "stdint.h"
                 )
-            ))
+            )
         }
 
         return@addEndHandler nodes

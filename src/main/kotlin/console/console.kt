@@ -1,12 +1,7 @@
 package console
 
-import java.io.File
-import generator.Generator
-import lexer.Lexer
-import parser.Parser
 import scripts.utils.Logger
 import scripts.utils.LogLevel
-import console.bindCommands
 
 data class Command(
     val name: String,
