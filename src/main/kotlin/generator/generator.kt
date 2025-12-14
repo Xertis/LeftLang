@@ -303,7 +303,7 @@ class Generator(val program: Program) {
 
 
     private fun genLoop(decl: LoopDecl, root: List<Node>): String {
-        return "for (;;) {\n${gen(decl.body, root)}}"
+        return "for (;;) {\n${gen(decl.body, root)}};"
     }
 
     private fun genBlock(decl: Block, root: List<Node>): String {
@@ -356,11 +356,45 @@ class Generator(val program: Program) {
     }
 
     private fun genCall(decl: CallExpr, root: List<Node>): String {
-        val argsStr = decl.args.joinToString(
+        val funDecl = findFunDecl(decl.name, root) ?: findFunDecl(decl.name, program.decls)
+
+        if (funDecl == null) {
+            val argsStr = decl.args.joinToString(
+                separator = ", ",
+                prefix = "(",
+                postfix = ")"
+            ) { gen(it, root) }
+            return "${decl.name}$argsStr"
+        }
+
+        val namedArgs = mutableMapOf<String, Expr>()
+        val notNamedArgs = mutableListOf<Expr>()
+
+        for (arg in decl.args) {
+            when (arg) {
+                is Arg -> namedArgs[arg.name] = arg.value
+                else -> notNamedArgs += arg
+            }
+        }
+
+        val finalArgs = mutableListOf<Expr>()
+        var posIndex = 0
+
+        for (param in funDecl.params) {
+            finalArgs += when {
+                posIndex < notNamedArgs.size -> notNamedArgs[posIndex++]
+                namedArgs.containsKey(param.name) -> namedArgs[param.name]!!
+                param.defaultValue != null -> param.defaultValue
+                else -> throw RuntimeException("Передано неверное кол-во аргументов")
+            }
+        }
+
+        val argsStr = finalArgs.joinToString(
             separator = ", ",
             prefix = "(",
             postfix = ")"
         ) { gen(it, root) }
+
         return "${decl.name}$argsStr"
     }
 

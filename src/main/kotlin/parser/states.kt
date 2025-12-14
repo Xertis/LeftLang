@@ -154,16 +154,22 @@ fun bindStates(parser: Parser) {
 
         val ranges = p.parseRange()
         var defaultValue = Int.MAX_VALUE
+        var value = 0
         for (singleRange in ranges.ranges) {
             if (singleRange.start != null) {
                 when (singleRange.start) {
-                    is Literal -> defaultValue = min(defaultValue, singleRange.start.value.toDouble().toInt())
+                    is Literal -> {
+                        value = singleRange.start.value.toDouble().toInt()
+                    }
                     is UnaryExpr if singleRange.start.value is Literal && singleRange.start.isPrefixed -> {
-                        defaultValue = min(defaultValue, "${singleRange.start.op}${singleRange.start.value.value}".toDouble().toInt())
+                        value = "${singleRange.start.op}${singleRange.start.value.value}".toDouble().toInt()
                     }
                     else -> {}
                 }
             }
+
+            if (singleRange.startIsStrong) value += 1
+            defaultValue = min(defaultValue, value)
         }
 
         for ((index, param) in params.withIndex()) {
@@ -186,6 +192,15 @@ fun bindStates(parser: Parser) {
             body
         )
     }) { _, t -> t == TokenTypes.KW_FOR }
+
+    parser.addStatement({ p ->
+        val type = p.expect(arrayOf(TokenTypes.KW_BREAK, TokenTypes.KW_CONTINUE))!!.type
+
+        when (type) {
+            TokenTypes.KW_BREAK -> Break()
+            else -> Continue()
+        }
+    }) { _, t -> t == TokenTypes.KW_BREAK || t == TokenTypes.KW_CONTINUE }
 
     // -- Системное --
 
