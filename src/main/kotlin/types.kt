@@ -1,5 +1,5 @@
 enum class TokenTypes {
-    IDENT, NUMBER, STRING, CHAR, VAL, VAR, CONST, LINK,
+    IDENT, NUMBER, STRING, CHAR, VAL, VAR, CONST, AMP,
 
     KW_U8, KW_U16, KW_U32, KW_U64, KW_UMAX,
     KW_I8, KW_I16, KW_I32, KW_I64, KW_IMAX,
@@ -18,15 +18,20 @@ enum class TokenTypes {
     KW_WHILE, KW_FOR, KW_LOOP, KW_BREAK, KW_CONTINUE,
     KW_REPEAT, KW_UNTIL,
     KW_TRUE, KW_FALSE,
-    KW_IN,
+    KW_IN, KW_AS,
+
     PLUS, MINUS, MUL, DIV, MOD, QMARK,
     PLUSEQ, MINUSEQ, MULEQ, DIVEQ, MODEQ, // +=, -=, *=, /= %=
+
     INC, DEC,
+
+    BITOR, BITXOR, BITNOT, SHL, SHR, // | ^ ~ << >>
+
     EQ, EQEQ, BANGEQ, LT, GT, LTE, GTE, //=, ==, !=, <, >, <=, >=
     AND, OR, NOT,
     LPAREN, RPAREN, LBRACE, RBRACE, LBRACK, RBRACK, COMMA, SEMI, COL, DOT, RANGE, //(){}[],;:. ..
     ARROW,
-    NEW_LINE, INCLUDE, EOF
+    NEW_LINE, INCLUDE, FROM, EOF
 
 }
 
@@ -92,7 +97,8 @@ val VALID_PREPROC_GROUP_TOKEN_TYPES = arrayOf(
 
 val PREFIXED_UNARY_TOKEN_TYPES = arrayOf(
     TokenTypes.INC, TokenTypes.DEC, TokenTypes.NOT,
-    TokenTypes.MINUS, TokenTypes.LINK
+    TokenTypes.MINUS, TokenTypes.AMP,
+    TokenTypes.BITNOT
 )
 
 val POSTFIXED_UNARY_TOKEN_TYPES = arrayOf(
@@ -101,7 +107,7 @@ val POSTFIXED_UNARY_TOKEN_TYPES = arrayOf(
 
 val OPEQ_TOKEN_TYPES = arrayOf(
     TokenTypes.PLUSEQ, TokenTypes.MINUSEQ,
-    TokenTypes.MULEQ, TokenTypes.DIVEQ, TokenTypes.MODEQ
+    TokenTypes.MULEQ, TokenTypes.DIVEQ, TokenTypes.MODEQ,
 )
 
 enum class TokenGroups {

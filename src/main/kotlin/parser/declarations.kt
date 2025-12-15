@@ -94,3 +94,6 @@ class Continue() : Expr()
 
 // --- системное ---
 data class Include(val path: String, val isLeft: Boolean=false) : Node()
+data class Use(val name: String, val alias: String?=null) : Node()
+
+data class FromInclude(val include: Include, val namespace: String, val using: List<Use>) : Node()

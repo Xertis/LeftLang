@@ -13,6 +13,7 @@ import parser.ConstDecl
 import parser.Continue
 import parser.Expr
 import parser.ForDecl
+import parser.FromInclude
 import parser.FunDecl
 import parser.Include
 import parser.IndexExpr
@@ -62,7 +63,7 @@ class Generator(val program: Program) {
             TokenTypes.KW_HEAVY, TokenTypes.KW_HEAVY_UNSIGNED -> "long long"
             TokenTypes.KW_F32 -> "float"
             TokenTypes.KW_F64 -> "double"
-            TokenTypes.KW_BOOL -> "_Bool"
+            TokenTypes.KW_BOOL -> "bool"
             TokenTypes.KW_VOID -> "void"
 
             TokenTypes.KW_U8 -> "uint8_t"
@@ -312,7 +313,7 @@ class Generator(val program: Program) {
         for (dec in decl.statements) {
             code.append(gen(dec, blockRoot))
             when (dec) {
-                is VarDecl, is CallExpr, is Return, is Assign, is VarBinaryExpr -> code.append(";\n")
+                is VarDecl, is CallExpr, is Return, is Assign, is VarBinaryExpr, is UnaryExpr, is BinaryExpr -> code.append(";\n")
                 else -> code.append("\n")
             }
         }
@@ -402,6 +403,24 @@ class Generator(val program: Program) {
         return "#include \"${decl.path}\"\n"
     }
 
+    private fun genFromInclude(decl: FromInclude, root: List<Node>): String {
+        val include = gen(decl.include, root)
+        var uses = ""
+        for (use in decl.using) {
+            uses += when (use.alias) {
+                is String -> {
+                    "auto& ${use.alias} = ${decl.namespace}::${use.name};\n"
+                }
+
+                null -> {
+                    "using ${decl.namespace}::${use.name};\n"
+                }
+            }
+        }
+
+        return "$include\n$uses"
+    }
+
     private fun genArray(decl: ArrayExpr, root: List<Node>): String {
         var array = "{"
         for ((index, expr) in decl.values.withIndex()) {
@@ -455,6 +474,7 @@ class Generator(val program: Program) {
             is BinaryExpr -> "(${gen(decl.left, root)} ${decl.op} ${gen(decl.right, root)})"
             is CallExpr -> genCall(decl, root)
             is Include -> genInclude(decl, root)
+            is FromInclude -> genFromInclude(decl, root)
             is Literal -> decl.value
             is VarRef -> decl.name
             is FunDecl -> genFunc(decl, root)

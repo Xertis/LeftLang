@@ -32,7 +32,7 @@ class LeftTests {
         try {
             val code = translate(content)
 
-            val res = runCommand("echo '$code' | gcc -xc - && ./a.out")
+            val res = runCommand("echo '$code' | g++ -xc - && ./a.out")
 
             return res
         } catch (e: Exception) {

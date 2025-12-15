@@ -5,7 +5,7 @@ import scripts.utils.TokenBuffer
 import TokenTypes
 import TokenizerStates
 
-const val VALID_OPERATOR_SYMBOLS = "-+/*%=<>&|!?"
+const val VALID_OPERATOR_SYMBOLS = "-+/*%=<>&|!?~"
 const val VALID_DELIMETER_SYMBOLS = ":;(){}[].,"
 
 fun bindStates(fsm: Fsm): Fsm {
@@ -146,6 +146,7 @@ fun bindStates(fsm: Fsm): Fsm {
                 "continue" -> lexer.putToken(TokenTypes.KW_CONTINUE, lexer.buffer)
 
                 "in" -> lexer.putToken(TokenTypes.KW_IN, lexer.buffer)
+                "as" -> lexer.putToken(TokenTypes.KW_AS, lexer.buffer)
 
                 "true" -> lexer.putToken(TokenTypes.KW_TRUE, lexer.buffer)
                 "false" -> lexer.putToken(TokenTypes.KW_FALSE, lexer.buffer)
@@ -154,6 +155,7 @@ fun bindStates(fsm: Fsm): Fsm {
                 "return" -> lexer.putToken(TokenTypes.KW_RETURN, lexer.buffer)
 
                 "include" -> lexer.putToken(TokenTypes.INCLUDE, lexer.buffer)
+                "from" -> lexer.putToken(TokenTypes.FROM, lexer.buffer)
 
                 else -> lexer.putToken(TokenTypes.IDENT, lexer.buffer)
             }
@@ -188,7 +190,8 @@ fun bindStates(fsm: Fsm): Fsm {
 
         val doubleOps = setOf(
             "++", "--", "+=", "-=", "*=", "/=", "%=",
-            "<=", ">=", "==", "!=", "||", "&&", "->"
+            "<=", ">=", "==", "!=", "||", "&&", "->",
+            "<<", ">>"
         )
 
         if (combined in doubleOps) {
@@ -209,6 +212,9 @@ fun bindStates(fsm: Fsm): Fsm {
                 "||" -> lexer.putToken(TokenTypes.OR, lexer.buffer)
                 "&&" -> lexer.putToken(TokenTypes.AND, lexer.buffer)
                 "->" -> lexer.putToken(TokenTypes.ARROW, lexer.buffer)
+
+                "<<" -> lexer.putToken(TokenTypes.SHL, lexer.buffer)
+                ">>" -> lexer.putToken(TokenTypes.SHR, lexer.buffer)
             }
             return TokenizerStates.DEFAULT
         }
@@ -223,8 +229,12 @@ fun bindStates(fsm: Fsm): Fsm {
             ">" -> lexer.putToken(TokenTypes.GT, lexer.buffer)
             "=" -> lexer.putToken(TokenTypes.EQ, lexer.buffer)
             "!" -> lexer.putToken(TokenTypes.NOT, lexer.buffer)
-            "&" -> lexer.putToken(TokenTypes.LINK, lexer.buffer)
+            "&" -> lexer.putToken(TokenTypes.AMP, lexer.buffer)
             "?" -> lexer.putToken(TokenTypes.QMARK, lexer.buffer)
+
+            "|" -> lexer.putToken(TokenTypes.BITOR, lexer.buffer)
+            "^" -> lexer.putToken(TokenTypes.BITXOR, lexer.buffer)
+            "~" -> lexer.putToken(TokenTypes.BITNOT, lexer.buffer)
         }
 
         if (ch in VALID_OPERATOR_SYMBOLS) {

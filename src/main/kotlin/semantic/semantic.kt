@@ -15,9 +15,11 @@ import parser.Expr
 import parser.Param
 import parser.Program
 import parser.RepeatUntilDecl
+import parser.UnaryExpr
 import parser.VarBinaryExpr
 import parser.VarDecl
 import parser.VarLink
+import parser.VarRef
 import parser.WhenDecl
 import parser.WhileDecl
 
@@ -223,11 +225,16 @@ fun bindMiddleWares(semantic: Semantic) {
                 }
             }
 
-            decl is VarLink -> {
+            decl is UnaryExpr && decl.value is VarRef -> {
                 for (node in nodes) {
                     if (node !is VarDecl) continue
-                    if (node.name == decl.ref.name) {
-                        throw RuntimeException("you cannot get the address of a unmutable variable")
+                    when (decl.op) {
+                        "++", "--" -> {}
+                        else -> break
+                    }
+
+                    if (node.name == decl.value.name) {
+                        throw RuntimeException("a unmutable variable cannot change its value")
                     }
                 }
             }

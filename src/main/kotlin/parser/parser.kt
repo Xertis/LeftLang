@@ -80,7 +80,7 @@ class Parser(val tokens: List<Token>) {
 
     fun makeAst(): Program {
         val decls = mutableListOf<Node>()
-        //println(tokens)
+
         while (!isEOF()) {
             val node = parseStatement()
             if (node != null) decls.add(node)
@@ -138,12 +138,36 @@ class Parser(val tokens: List<Token>) {
         BinaryExpr(left, op, right)
     }
 
+    private fun parseXor(): Expr = parseInfix(TokenTypes.BITXOR) { left, op, right ->
+        BinaryExpr(left, op, right)
+    }
+
     private fun parseAnd(): Expr = parseInfix(TokenTypes.AND) { left, op, right ->
         BinaryExpr(left, op, right)
     }
 
-    private fun parseComparison(): Expr {
+    private fun parseBitOr(): Expr = parseInfix(TokenTypes.BITOR) { left, op, right ->
+        BinaryExpr(left, op, right)
+    }
+
+    private fun parseBitAnd(): Expr = parseInfix(TokenTypes.AMP) { left, op, right ->
+        BinaryExpr(left, op, right)
+    }
+
+    private fun parseShift(): Expr {
         var expr = parseAddSub()
+
+        while (peek(skipNewLine = false)?.type == TokenTypes.SHL ||
+            peek(skipNewLine = false)?.type == TokenTypes.SHR) {
+            val op = advance(skipNewLine = false)!!.value
+            val right = parseAddSub()
+            expr = BinaryExpr(expr, op, right)
+        }
+        return expr
+    }
+
+    private fun parseComparison(): Expr {
+        var expr = parseShift()
 
         while (peek(skipNewLine = false)?.type in listOf(
                 TokenTypes.EQEQ, TokenTypes.BANGEQ,
@@ -152,7 +176,7 @@ class Parser(val tokens: List<Token>) {
             )
         ) {
             val op = advance(skipNewLine = false)!!.value
-            val right = parseAddSub()
+            val right = parseShift()
             expr = BinaryExpr(expr, op, right)
         }
         return expr
@@ -252,6 +276,31 @@ class Parser(val tokens: List<Token>) {
         return expr
     }
 
+    private fun <T> parseInfix(stopAt: TokenTypes, builder: (Expr, String, Expr) -> T): Expr where T : Expr {
+        var left = when (stopAt) {
+            TokenTypes.OR -> parseXor()
+            TokenTypes.BITXOR -> parseBitOr()
+            TokenTypes.BITOR -> parseBitAnd()
+            TokenTypes.AMP -> parseAnd()
+            TokenTypes.AND -> parseComparison()
+            else -> throw RuntimeException("Неизвестный инфиксный оператор")
+        }
+
+        while (peek(skipNewLine = false)?.type == stopAt) {
+            val op = advance(skipNewLine = false)!!.value
+            val right = when (stopAt) {
+                TokenTypes.OR -> parseXor()
+                TokenTypes.BITXOR -> parseBitOr()
+                TokenTypes.BITOR -> parseBitAnd()
+                TokenTypes.AMP -> parseAnd()
+                TokenTypes.AND -> parseComparison()
+                else -> throw RuntimeException("Неизвестный инфиксный оператор")
+            }
+            left = builder(left, op, right)
+        }
+        return left
+    }
+
     private fun parsePrimary(): Expr {
         val token = advance() ?: throw RuntimeException("Неожиданный конец файла")
 
@@ -288,25 +337,6 @@ class Parser(val tokens: List<Token>) {
             }
             else -> throw RuntimeException("Неожиданный токен в выражении: $token")
         }
-    }
-
-    private fun <T> parseInfix(stopAt: TokenTypes, builder: (Expr, String, Expr) -> T): Expr where T : Expr {
-        var left = when (stopAt) {
-            TokenTypes.OR -> parseAnd()
-            TokenTypes.AND -> parseComparison()
-            else -> throw RuntimeException("Неизвестный инфиксный оператор")
-        }
-        
-        while (peek(skipNewLine = false)?.type == stopAt) {
-            val op = advance(skipNewLine = false)!!.value
-            val right = when (stopAt) {
-                TokenTypes.OR -> parseAnd()
-                TokenTypes.AND -> parseComparison()
-                else -> throw RuntimeException("Неизвестный инфиксный оператор")
-            }
-            left = builder(left, op, right)
-        }
-        return left
     }
 
     fun parseBlock(ownScopeStack: Boolean = true): Block {
@@ -390,6 +420,34 @@ class Parser(val tokens: List<Token>) {
         }
 
         return Range(ranges)
+    }
+
+    fun parseVarString(stopToken: TokenTypes): String {
+        val res = StringBuilder()
+
+        while (peek(skipNewLine = false)?.type != stopToken) {
+            val token = peek(skipNewLine = false)
+            if (token != null) {res.append(token.value); res.append(" ")}
+            else break
+
+            advance()
+        }
+
+        return res.toString().dropLast(1)
+    }
+
+    fun parseVarString(stopTokens: Array<TokenTypes>): String {
+        val res = StringBuilder()
+
+        while (peek(skipNewLine = false)?.type !in stopTokens) {
+            val token = peek(skipNewLine = false)
+            if (token != null) {res.append(token.value); res.append(" ")}
+            else break
+
+            advance()
+        }
+
+        return res.toString().dropLast(1)
     }
 
     fun parseSingleRange(): List<SingleRange> {

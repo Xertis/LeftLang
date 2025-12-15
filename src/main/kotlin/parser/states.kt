@@ -137,6 +137,14 @@ fun bindStates(parser: Parser) {
     }) { _, t -> t == TokenTypes.KW_WHILE }
 
     parser.addStatement({ p ->
+        p.expect(TokenTypes.KW_REPEAT)
+        val body = p.parseBlock(false)
+        p.expect(TokenTypes.KW_UNTIL)
+        val logic = p.parseExpr()
+        RepeatUntilDecl(logic, body)
+    }) { _, t -> t == TokenTypes.KW_REPEAT}
+
+    parser.addStatement({ p ->
         p.expect(TokenTypes.KW_LOOP)
         val body = p.parseBlock(false)
         LoopDecl(body)
@@ -210,4 +218,33 @@ fun bindStates(parser: Parser) {
 
         Include(path, isLeft = false)
     }) { _, t -> t == TokenTypes.INCLUDE }
+
+    parser.addStatement({ p ->
+        p.expect(TokenTypes.FROM)
+        p.expect(TokenTypes.LPAREN)
+        val path = p.parseVarString(TokenTypes.RPAREN)
+        p.expect(TokenTypes.RPAREN)
+
+        p.expect(TokenTypes.COL)
+
+        val namespace = p.parseVarString(arrayOf(TokenTypes.INCLUDE))
+        p.expect(TokenTypes.INCLUDE)
+
+        val using = mutableListOf<Use>()
+        while (p.peek(skipNewLine = false)?.type != TokenTypes.NEW_LINE) {
+            val name = p.expect(TokenTypes.IDENT)!!.value
+            val alias = if (p.peek()?.type == TokenTypes.KW_AS) {
+                p.advance()
+                p.expect(TokenTypes.IDENT)!!.value
+            } else {
+                null
+            }
+
+            if (p.peek()?.type == TokenTypes.COMMA) p.advance()
+
+            using += Use(name, alias)
+        }
+
+        FromInclude(Include(path, isLeft = false), namespace,using)
+    }) { _, t -> t == TokenTypes.FROM }
 }
